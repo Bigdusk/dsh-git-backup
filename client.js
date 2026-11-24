@@ -6,28 +6,12 @@ window.__ModuleLoader__.load({
 
     // Copy is fixed to Chinese for this installation.
     const TEXT = {
-      title: 'GitHub .dsh 备份',
-      short: 'GitHub .dsh',
-      status: '状态',
-      push: '推送',
-      pull: '拉取',
-      auto: '自动同步',
-      settings: '设置',
       viewLabel: '备份',
       viewTitle: '备份与回滚',
-      viewHint: '预览并回滚历史版本、管理参与备份的工作区、调整仓库配置。',
+      viewHint: '所有同步都是自动的：改动会静默提交，这里只用来查看历史、回滚和调整配置。',
       versions: '版本回滚',
       workspaces: '工作区',
-      config: '仓库配置',
-      tokenLabel: 'GitHub token',
-      tokenPlaceholder: 'ghp_… 或 github_pat_…',
-      tokenHint: '需要 repo 权限 · 保存到 %USERPROFILE%\\.dsh\\.env · 不写入对话记录',
-      save: '保存',
-      close: '关闭',
-      cancel: '取消',
-      tokenEmpty: '先粘贴 token',
-      tokenSaved: 'token 已保存，正在校验并尝试备份',
-      saveFailed: '保存失败',
+      config: '配置',
       refresh: '刷新',
       rollbackRef: '输入版本号或提交号',
       rollback: '回滚',
@@ -38,8 +22,11 @@ window.__ModuleLoader__.load({
       confirmAll: '全部回滚',
       previewTitle: '回滚预览',
       detailTitle: '版本详情',
+      close: '关闭',
+      cancel: '取消',
+      save: '保存',
       noFiles: '没有文件变更。',
-      rollbackHint: '回滚会先把本地 .dsh 恢复到该版本（并自动备份当前改动），再推一个新提交；结果同时出现在「对话」里。',
+      rollbackHint: '回滚会先把本地 .dsh 恢复到该版本（自动备份当前改动），再推一个新提交；结果同时出现在「对话」里。',
       noVersions: '暂无版本记录。',
       noWorkspaces: '暂无工作区记录。',
       addPath: '输入工作区绝对路径',
@@ -47,64 +34,42 @@ window.__ModuleLoader__.load({
       enable: '启用',
       disable: '停用',
       files: '个文件',
-      pending: '执行中…',
-      sent: '已发送，结果显示在对话里',
       failed: '失败',
       noSession: '没有活动会话',
       loading: '加载中…',
       disabledBadge: '已停用',
       noMessage: '(无说明)',
       repoLabel: '仓库（owner/name，留空自动建）',
-      repoNameLabel: '仓库名',
       branchLabel: '分支',
       pollLabel: '轮询秒数',
       layoutLabel: '远端布局',
       autoLabel: '自动同步',
+      tokenLabel: 'GitHub token',
+      tokenPlaceholder: 'ghp_… 或 github_pat_…',
+      tokenHint: '需要 repo 权限 · 保存到 %USERPROFILE%\\.dsh\\.env · 不写入对话记录',
+      tokenSaved: 'token 已保存并验证',
+      tokenEmpty: '先粘贴 token',
+      tokenConfigured: (days) =>
+        days === null || days === undefined ? '已配置' : days >= 0 ? `已配置，还有 ${days} 天过期` : '已配置但已过期',
+      tokenMissing: '未配置',
       on: '开',
       off: '关',
       configHint: '保存会写入 profile 配置，插件行会重启一次以应用。',
       configSaved: '配置已保存，插件正在重启…',
-      bannerTokenMissing: 'GitHub token 未配置：点输入框下方控制条的「设置」粘贴后保存。',
-      bannerExpiring: (days) => (days >= 0 ? `GitHub token 还有 ${days} 天过期，记得续期。` : 'GitHub token 已过期，请重新保存。'),
-      bannerFailing: (names) => `自动同步失败：${names.join('、')}（打开「状态」看具体原因）`,
-      undoDone: '已撤销上一次回滚',
-      undoMissing: '没有可撤销的回滚',
+      nothingToSave: '没有需要保存的改动。',
+      bannerTokenMissing: '还没有配置 GitHub token，在下方「配置」里粘贴保存后自动备份才会开始。',
+      bannerExpiring: (days) =>
+        days >= 0 ? `GitHub token 还有 ${days} 天过期，记得续期。` : 'GitHub token 已过期，请重新保存。',
+      bannerFailing: (names) => `自动同步失败：${names.join('、')}（点「状态」或让 agent 查 dsh_backup_status）`,
+      statusOk: '已发送，结果显示在对话里',
     }
 
     const STYLES = `
-.dshgb-root { display:flex; flex-direction:column; gap:4px; margin-top:2px; padding:0 2px; font-size:12px; line-height:1.5; color:var(--dsw-alias-label-secondary); }
-.dshgb-bar { display:flex; align-items:center; flex-wrap:wrap; gap:1px; min-height:24px; }
-.dshgb-id { display:inline-flex; align-items:center; gap:6px; margin-right:6px; padding-right:8px; border-right:1px solid var(--dsw-alias-border-l1); color:var(--dsw-alias-label-secondary); white-space:nowrap; }
-.dshgb-id svg { display:block; opacity:.85; }
-.dshgb-btn { appearance:none; border:1px solid transparent; background:transparent; color:var(--dsw-alias-label-secondary); border-radius:6px; padding:2px 8px; font:inherit; font-size:12px; line-height:1.6; cursor:pointer; transition:background-color .12s ease, color .12s ease, border-color .12s ease; }
-.dshgb-btn:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary); }
-.dshgb-btn:active:not(:disabled) { background:var(--dsw-alias-bg-layer-1); }
-.dshgb-btn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:1px; }
-.dshgb-btn:disabled { opacity:.5; cursor:default; }
-.dshgb-btn[aria-expanded="true"], .dshgb-btn[data-active="true"] { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary); }
-.dshgb-btn--icon { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; padding:0; }
-.dshgb-btn--icon svg { display:block; }
-.dshgb-btn--primary { border-color:var(--dsw-alias-border-l2); background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary); }
-.dshgb-btn--primary:hover:not(:disabled) { border-color:var(--dsw-alias-brand-primary); }
-.dshgb-btn--small { padding:1px 7px; font-size:11px; }
-.dshgb-note { margin-left:auto; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:42ch; }
-.dshgb-note--ok { color:var(--dsw-alias-state-success-primary); }
-.dshgb-note--err { color:var(--dsw-alias-state-error-primary); }
-.dshgb-panel { display:flex; flex-direction:column; gap:8px; padding:10px 12px; border:1px solid var(--dsw-alias-border-l1); border-radius:10px; background:var(--dsw-alias-bg-layer-1); }
-.dshgb-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.dshgb-label { color:var(--dsw-alias-label-primary); font-weight:500; white-space:nowrap; }
-.dshgb-input { flex:1 1 200px; min-width:140px; height:26px; box-sizing:border-box; border:1px solid var(--dsw-alias-border-l2); border-radius:6px; background:var(--dsw-alias-bg-base); color:var(--dsw-alias-label-primary); font:inherit; font-size:12px; padding:0 8px; transition:border-color .12s ease; }
-.dshgb-input::placeholder { color:var(--dsw-alias-state-idle-primary); }
-.dshgb-input:focus { outline:none; border-color:var(--dsw-alias-brand-primary); }
-.dshgb-input:disabled { opacity:.6; }
-.dshgb-hint { font-size:11px; color:var(--dsw-alias-label-secondary); }
-
-/* Flat backup view */
 .dshgb-view { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:32px 40px 48px; font-size:12.5px; line-height:1.55; color:var(--dsw-alias-label-secondary); }
 .dshgb-viewinner { display:flex; flex-direction:column; gap:28px; max-width:900px; margin:0 auto; }
 .dshgb-viewhead { display:flex; flex-direction:column; gap:6px; }
 .dshgb-viewtitle { margin:0; font-size:17px; font-weight:600; letter-spacing:.01em; color:var(--dsw-alias-label-primary); }
-.dshgb-viewhint { margin:0; max-width:62ch; }
+.dshgb-viewhint { margin:0; max-width:64ch; }
 .dshgb-banner { display:flex; gap:8px; align-items:flex-start; padding:10px 12px; border-radius:10px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-state-warn-primary); }
 .dshgb-banner--err { color:var(--dsw-alias-state-error-primary); }
 .dshgb-section { display:flex; flex-direction:column; gap:2px; }
@@ -147,42 +112,8 @@ window.__ModuleLoader__.load({
 .dshgb-configgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px 18px; padding:6px 8px 0; }
 .dshgb-fieldgroup { display:flex; flex-direction:column; gap:4px; min-width:0; }
 .dshgb-fieldlabel { font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-row { display:flex; align-items:center; gap:2px; flex-wrap:wrap; }
 `
-
-    function cloudIcon() {
-      return h(
-        'svg',
-        { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
-        h('path', {
-          d: 'M5.2 11.8h5.9a2.5 2.5 0 0 0 .3-4.98 3.4 3.4 0 0 0-6.52-.62A2.35 2.35 0 0 0 5.2 11.8Z',
-          stroke: 'currentColor',
-          strokeWidth: 1.3,
-          strokeLinejoin: 'round',
-        }),
-        h('path', {
-          d: 'M8 12.2V8.6M8 8.6 6.7 9.9M8 8.6l1.3 1.3',
-          stroke: 'currentColor',
-          strokeWidth: 1.3,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-        }),
-      )
-    }
-
-    function slidersIcon() {
-      return h(
-        'svg',
-        { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
-        h('path', {
-          d: 'M2.2 4.6h5.1M11.2 4.6h2.6M2.2 11.4h2.4M7.2 11.4h6.6',
-          stroke: 'currentColor',
-          strokeWidth: 1.3,
-          strokeLinecap: 'round',
-        }),
-        h('circle', { cx: 9.4, cy: 4.6, r: 1.5, stroke: 'currentColor', strokeWidth: 1.3 }),
-        h('circle', { cx: 5.5, cy: 11.4, r: 1.5, stroke: 'currentColor', strokeWidth: 1.3 }),
-      )
-    }
 
     const UI_MARKER = /⟦dshb:(.+?)⟧/s
 
@@ -298,165 +229,6 @@ window.__ModuleLoader__.load({
       return payloads
     }
 
-    function makeDock(ctx) {
-      const dispatchFor = createDispatcher(ctx)
-
-      return function BackupDock(props) {
-        const [pending, setPending] = React.useState('')
-        const [note, setNote] = React.useState(null)
-        const [settingsOpen, setSettingsOpen] = React.useState(false)
-        const [tokenDraft, setTokenDraft] = React.useState('')
-
-        const sessionId = props?.sessionId
-        const dispatch = dispatchFor(sessionId)
-        const busy = pending !== ''
-
-        const runCommand = (action, label) => {
-          if (busy) return
-          setPending(action)
-          setNote(null)
-          dispatch(`/dsh-backup ${action}`)
-            .then(() => setNote({ kind: 'done', text: `${label} · ${TEXT.sent}` }))
-            .catch((error) =>
-              setNote({ kind: 'failed', text: `${label} · ${TEXT.failed}: ${error?.message ?? String(error)}` }),
-            )
-            .finally(() => setPending(''))
-        }
-
-        const saveToken = () => {
-          if (busy) return
-          const value = tokenDraft.trim()
-          if (value === '') {
-            setNote({ kind: 'failed', text: TEXT.tokenEmpty })
-            return
-          }
-          setPending('token')
-          setNote(null)
-          dispatch(`/dsh-backup token ${value}`)
-            .then(() => {
-              setTokenDraft('')
-              setSettingsOpen(false)
-              setNote({ kind: 'done', text: TEXT.tokenSaved })
-            })
-            .catch((error) =>
-              setNote({ kind: 'failed', text: `${TEXT.saveFailed} · ${TEXT.failed}: ${error?.message ?? String(error)}` }),
-            )
-            .finally(() => setPending(''))
-        }
-
-        const commandButton = (action, label) =>
-          h(
-            'button',
-            {
-              key: action,
-              type: 'button',
-              className: 'dshgb-btn',
-              title: `/dsh-backup ${action}`,
-              disabled: busy,
-              'data-active': pending === action ? 'true' : undefined,
-              onClick: () => runCommand(action, label),
-            },
-            pending === action ? TEXT.pending : label,
-          )
-
-        const noteNode = note
-          ? h(
-              'span',
-              {
-                key: 'note',
-                className: `dshgb-note ${note.kind === 'failed' ? 'dshgb-note--err' : 'dshgb-note--ok'}`,
-                title: note.text,
-              },
-              note.text,
-            )
-          : null
-
-        const bar = h(
-          'div',
-          { key: 'bar', className: 'dshgb-bar' },
-          h('span', { key: 'id', className: 'dshgb-id', title: TEXT.title }, [
-            cloudIcon(),
-            h('span', { key: 'text' }, TEXT.short),
-          ]),
-          commandButton('status', TEXT.status),
-          commandButton('push', TEXT.push),
-          commandButton('pull', TEXT.pull),
-          commandButton('auto', TEXT.auto),
-          noteNode,
-          h(
-            'button',
-            {
-              key: 'settings',
-              type: 'button',
-              className: 'dshgb-btn dshgb-btn--icon',
-              title: TEXT.settings,
-              'aria-label': TEXT.settings,
-              'aria-expanded': settingsOpen,
-              disabled: busy,
-              onClick: () => {
-                setSettingsOpen((open) => !open)
-                setNote(null)
-              },
-            },
-            slidersIcon(),
-          ),
-        )
-
-        const settingsPanel = settingsOpen
-          ? h(
-              'div',
-              { key: 'settings', className: 'dshgb-panel', role: 'group', 'aria-label': TEXT.settings },
-              h('div', { key: 'row', className: 'dshgb-row' }, [
-                h('span', { key: 'label', className: 'dshgb-label' }, TEXT.tokenLabel),
-                h('input', {
-                  key: 'input',
-                  className: 'dshgb-input',
-                  type: 'password',
-                  value: tokenDraft,
-                  placeholder: TEXT.tokenPlaceholder,
-                  autoComplete: 'off',
-                  autoCorrect: 'off',
-                  spellCheck: false,
-                  autoFocus: true,
-                  'aria-label': TEXT.tokenLabel,
-                  disabled: busy,
-                  onChange: (event) => setTokenDraft(event.target.value),
-                  onKeyDown: (event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      saveToken()
-                    }
-                  },
-                }),
-                h(
-                  'button',
-                  { key: 'save', type: 'button', className: 'dshgb-btn dshgb-btn--primary', disabled: busy, onClick: saveToken },
-                  pending === 'token' ? TEXT.pending : TEXT.save,
-                ),
-                h(
-                  'button',
-                  {
-                    key: 'close',
-                    type: 'button',
-                    className: 'dshgb-btn',
-                    disabled: busy,
-                    onClick: () => {
-                      setSettingsOpen(false)
-                      setTokenDraft('')
-                      setNote(null)
-                    },
-                  },
-                  TEXT.close,
-                ),
-              ]),
-              h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.tokenHint),
-            )
-          : null
-
-        return h('div', { className: 'dshgb-root' }, [h('style', { key: 'style' }, STYLES), bar, settingsPanel])
-      }
-    }
-
     function makeView(ctx) {
       const dispatchFor = createDispatcher(ctx)
 
@@ -471,9 +243,11 @@ window.__ModuleLoader__.load({
 
         const [versionBusy, setVersionBusy] = React.useState(false)
         const [workspaceBusy, setWorkspaceBusy] = React.useState(false)
+        const [tokenBusy, setTokenBusy] = React.useState(false)
         const [rollbackRef, setRollbackRef] = React.useState('')
         const [workspacePathDraft, setWorkspacePathDraft] = React.useState('')
         const [configDraft, setConfigDraft] = React.useState({ repo: '', branch: '', pollSeconds: '' })
+        const [tokenDraft, setTokenDraft] = React.useState('')
         const [status, setStatus] = React.useState(null)
         const [detailHidden, setDetailHidden] = React.useState(false)
         const [previewHidden, setPreviewHidden] = React.useState(false)
@@ -481,9 +255,8 @@ window.__ModuleLoader__.load({
         const dispatch = dispatchFor(props?.sessionId)
         const hasSession = Boolean(props?.sessionId)
 
-        const run = (label, line, options = {}) => {
-          if (options.busy) return Promise.resolve(null)
-          return dispatch(line)
+        const run = (label, line, options = {}) =>
+          dispatch(line)
             .then((result) => {
               if (options.okText) setStatus({ kind: 'ok', text: options.okText })
               return result
@@ -495,7 +268,6 @@ window.__ModuleLoader__.load({
             .finally(() => {
               if (options.done) options.done()
             })
-        }
 
         const refreshVersions = () => {
           if (versionBusy || !hasSession) return
@@ -511,7 +283,7 @@ window.__ModuleLoader__.load({
 
         const refreshStatus = () => {
           if (!hasSession) return
-          run(TEXT.status, '/dsh-backup status')
+          run('状态', '/dsh-backup status')
         }
 
         const loadConfig = () => {
@@ -535,16 +307,24 @@ window.__ModuleLoader__.load({
           if (!hasSession) return
           setPreviewHidden(true)
           const only = Array.isArray(paths) && paths.length > 0 ? ` --only ${paths.join(' ')}` : ''
-          run(
-            TEXT.rollback,
-            `/dsh-backup rollback ${sha}${only}`,
-            { okText: `${TEXT.rollback} · ${TEXT.sent}`, done: () => refreshVersions() },
-          )
+          run(TEXT.rollback, `/dsh-backup rollback ${sha}${only}`, {
+            okText: `${TEXT.rollback} · ${TEXT.statusOk}`,
+            done: () => {
+              refreshVersions()
+              refreshStatus()
+            },
+          })
         }
 
         const undoRollback = () => {
           if (!hasSession) return
-          run(TEXT.undo, '/dsh-backup undo', { okText: `${TEXT.undoDone}`, done: () => refreshVersions() })
+          run(TEXT.undo, '/dsh-backup undo', {
+            okText: TEXT.undo,
+            done: () => {
+              refreshVersions()
+              refreshStatus()
+            },
+          })
         }
 
         const switchWorkspace = (entry) => {
@@ -567,11 +347,29 @@ window.__ModuleLoader__.load({
           dispatch(`/dsh-backup workspace add ${target}`)
             .then(() => {
               setWorkspacePathDraft('')
-              setStatus({ kind: 'ok', text: `${TEXT.add} ${target} · ${TEXT.sent}` })
+              setStatus({ kind: 'ok', text: `${TEXT.add} ${target} · ${TEXT.statusOk}` })
               return dispatch('/dsh-backup workspaces').catch(() => {})
             })
             .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
             .finally(() => setWorkspaceBusy(false))
+        }
+
+        const saveToken = () => {
+          const value = tokenDraft.trim()
+          if (value === '') {
+            setStatus({ kind: 'err', text: TEXT.tokenEmpty })
+            return
+          }
+          setTokenBusy(true)
+          setStatus(null)
+          dispatch(`/dsh-backup token ${value}`)
+            .then(() => {
+              setTokenDraft('')
+              setStatus({ kind: 'ok', text: TEXT.tokenSaved })
+              return dispatch('/dsh-backup status').catch(() => {})
+            })
+            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.save} · ${TEXT.failed}: ${error?.message ?? String(error)}` }))
+            .finally(() => setTokenBusy(false))
         }
 
         const saveConfig = () => {
@@ -584,7 +382,7 @@ window.__ModuleLoader__.load({
             writes.push(['pollSeconds', configDraft.pollSeconds])
           }
           if (writes.length === 0) {
-            setStatus({ kind: 'ok', text: '没有需要保存的改动。' })
+            setStatus({ kind: 'ok', text: TEXT.nothingToSave })
             return
           }
           let chain = Promise.resolve()
@@ -596,14 +394,14 @@ window.__ModuleLoader__.load({
               setStatus({ kind: 'ok', text: TEXT.configSaved })
               setConfigDraft({ repo: '', branch: '', pollSeconds: '' })
             })
-            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.saveFailed}: ${error?.message ?? String(error)}` }))
+            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.save} · ${TEXT.failed}: ${error?.message ?? String(error)}` }))
         }
 
         const setLayout = (layout) => {
           if (!hasSession) return
           dispatch(`/dsh-backup config set layout ${layout}`)
             .then(() => setStatus({ kind: 'ok', text: TEXT.configSaved }))
-            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.saveFailed}: ${error?.message ?? String(error)}` }))
+            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
         }
 
         const setAutoSync = (enabled) => {
@@ -613,7 +411,7 @@ window.__ModuleLoader__.load({
               setStatus({ kind: 'ok', text: TEXT.configSaved })
               return dispatch('/dsh-backup config').catch(() => {})
             })
-            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.saveFailed}: ${error?.message ?? String(error)}` }))
+            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
         }
 
         React.useEffect(() => {
@@ -767,6 +565,13 @@ window.__ModuleLoader__.load({
           : null
 
         const configValues = config ?? {}
+        const tokenState = statusInfo?.token
+        const tokenLabel = tokenState?.present
+          ? TEXT.tokenConfigured(tokenState.daysLeft)
+          : tokenState === null || tokenState === undefined
+            ? ''
+            : TEXT.tokenMissing
+
         const configSection = h('section', { key: 'config', className: 'dshgb-section', 'aria-label': TEXT.config }, [
           h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
             h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.config),
@@ -776,6 +581,31 @@ window.__ModuleLoader__.load({
             ]),
           ]),
           h('div', { key: 'grid', className: 'dshgb-configgrid' }, [
+            h('label', { key: 'token', className: 'dshgb-fieldgroup' }, [
+              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, `${TEXT.tokenLabel}${tokenLabel ? `（${tokenLabel}）` : ''}`),
+              h('div', { key: 'row', className: 'dshgb-row' }, [
+                h('input', {
+                  key: 'input',
+                  className: 'dshgb-field',
+                  type: 'password',
+                  value: tokenDraft,
+                  placeholder: TEXT.tokenPlaceholder,
+                  autoComplete: 'off',
+                  autoCorrect: 'off',
+                  spellCheck: false,
+                  disabled: tokenBusy,
+                  onChange: (event) => setTokenDraft(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      saveToken()
+                    }
+                  },
+                }),
+                textButton('save-token', tokenBusy ? '…' : '保存 token', saveToken, { accent: true, disabled: tokenBusy }),
+              ]),
+              h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.tokenHint),
+            ]),
             h('label', { key: 'repo', className: 'dshgb-fieldgroup' }, [
               h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.repoLabel),
               h('input', {
@@ -850,7 +680,7 @@ window.__ModuleLoader__.load({
               }
             },
           }),
-          textButton('go', TEXT.preview, () => rollbackRef.trim() && openPreview(rollbackRef.trim()), {
+          textButton('preview', TEXT.preview, () => rollbackRef.trim() && openPreview(rollbackRef.trim()), {
             disabled: versionBusy,
           }),
           textButton('rollback', TEXT.rollback, () => rollbackRef.trim() && rollbackTo(rollbackRef.trim()), {
@@ -944,14 +774,7 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots'],
       apply(ctx) {
-        const BackupDock = makeDock(ctx)
         const BackupView = makeView(ctx)
-        ctx.slots.inject('conversation.composer.dock', () =>
-          ctx.slots.register(
-            { name: 'conversation.composer.dock', id: 'dsh-git-backup', order: 20, label: () => TEXT.title },
-            BackupDock,
-          ),
-        )
         ctx.slots.inject('conversation.view', () =>
           ctx.slots.register(
             { name: 'conversation.view', id: 'dsh-git-backup', order: 20, label: () => TEXT.viewLabel },
