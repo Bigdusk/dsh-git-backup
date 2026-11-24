@@ -20,4 +20,4 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Run test suite (zero dependencies)
-        run: node --test test
+        run: node --test test/engine.test.mjs test/commands.test.mjs test/client.test.mjs test/util.test.mjs
