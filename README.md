@@ -25,14 +25,14 @@
 ## 界面
 
 - **全自动，无手动同步按钮**：不做「推送 / 拉取 / 自动同步」这类按钮，改动静默提交，界面只负责查看、回滚与配置。
-- **「备份」视图**：和「对话」「轨迹」同一排页签，包含版本回滚（详情/预览/回滚/仅恢复/撤销）、工作区、配置三个区；右上角常驻 **「设置 token」** 按钮。平面化设计，配色只用 DSH 主题令牌，明暗主题自适应。
+- **「快照」视图**：和「对话」「轨迹」同一排页签（取这个名字是因为这一页在管版本快照，备份本身是后台自动行为）。头部有状态胶囊（自动同步 / 仓库 / 分支 / 布局 / token），版本列表带骨架屏、`最新` 徽章、相对时间与悬停渐显的动作按钮，分区标题吸顶；右上角常驻 **「设置 token」** 按钮。配色只用 DSH 主题令牌，支持 `prefers-reduced-motion`。
 
 ## 安装
 
 在 DSH 里从本地目录安装（插件会链接到当前 profile）：
 
 1. 打开 **Plugins → Add plugin**，选择本目录；或让 agent 用 `plugin_manager` 的 `install_bundle` 安装该绝对路径。
-2. 打开「备份」页，点右上角 **「设置 token」**，粘贴 token 保存；或手工写进 `%USERPROFILE%\.dsh\.env`：
+2. 打开「快照」页，点右上角 **「设置 token」**，粘贴 token 保存；或手工写进 `%USERPROFILE%\.dsh\.env`：
 
 ```
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxx
@@ -44,12 +44,12 @@ token 需要 `repo` 权限（classic），或 fine-grained 的 Contents: Read an
 
 1. 保存 token 后自动开始首次全量备份（仓库默认 `dsh-backup`，私有，自动创建）。
 2. 之后编辑 `.dsh` 下的文件，插件会自动提交。
-3. 需要回退时打开「备份」页 → 选版本 → 预览 → 回滚（或只恢复其中某个文件）。
+3. 需要回退时打开「快照」页 → 选版本 → 预览 → 回滚（或只恢复其中某个文件）。
 4. 换机器：`node recover.mjs --repo <owner>/dsh-backup --target <工作区目录>`。
 
 ## 命令与工具
 
-斜杠命令（不经模型，「备份」视图调用的就是它；日常同步不需要手动执行）：
+斜杠命令（不经模型，「快照」视图调用的就是它；日常同步不需要手动执行）：
 
 ```
 /dsh-backup status | push | pull
@@ -99,7 +99,7 @@ node scripts/publish.mjs --repo Bigdusk/dsh-git-backup
 
 ```
 index.js           插件装配（轮询、工具、命令、配置写入）
-client.js          「备份」视图（React，无构建步骤；无手动同步按钮）
+client.js          「快照」视图（React，无构建步骤；无手动同步按钮）
 lib/engine.js      Git Data API 同步、回滚、工作区注册表、状态
 lib/github.js      GitHub REST 客户端（重试、token 过期头）
 lib/commands.js    /dsh-backup 命令

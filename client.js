@@ -5,15 +5,30 @@ window.__ModuleLoader__.load({
     const h = React.createElement
 
     // Copy is fixed to Chinese for this installation.
+    const NAME = '快照'
     const TEXT = {
-      viewLabel: '备份',
-      viewTitle: '备份与回滚',
-      viewHint: '所有同步都是自动的：改动会静默提交，这里只用来查看历史、回滚和调整配置。',
+      viewLabel: NAME,
+      viewTitle: '快照与版本',
+      viewSubtitle: 'GitHub 自动备份 · 版本回滚 · 工作区 · 配置',
+      tokenButton: '设置 token',
+      tokenLabel: 'GitHub token',
+      tokenPlaceholder: 'ghp_… 或 github_pat_…',
+      tokenHint: '需要 repo 权限 · 保存到 %USERPROFILE%\\.dsh\\.env · 不写入对话记录',
+      tokenSaved: 'token 已保存并验证，自动备份已开始',
+      tokenEmpty: '先粘贴 token',
+      tokenConfigured: (days) =>
+        days === null || days === undefined ? '已配置' : days >= 0 ? `还有 ${days} 天过期` : '已过期',
+      tokenMissing: '未配置',
+      chipAuto: (poll) => `自动同步 · 每 ${poll}s`,
+      chipRepo: (repo) => `仓库 · ${repo}`,
+      chipRepoAuto: (name) => `仓库 · 自动建仓（${name}）`,
+      chipBranch: (branch) => `分支 · ${branch}`,
+      chipLayout: (layout) => (layout === 'root' ? '布局 · 仓库根' : '布局 · workspaces/'),
       versions: '版本回滚',
       workspaces: '工作区',
       config: '配置',
       refresh: '刷新',
-      rollbackRef: '输入版本号或提交号',
+      rollbackRef: '版本号或提交号',
       rollback: '回滚',
       preview: '预览',
       detail: '详情',
@@ -25,97 +40,146 @@ window.__ModuleLoader__.load({
       close: '关闭',
       cancel: '取消',
       save: '保存',
+      saveToken: '保存 token',
       noFiles: '没有文件变更。',
       rollbackHint: '回滚会先把本地 .dsh 恢复到该版本（自动备份当前改动），再推一个新提交；结果同时出现在「对话」里。',
-      noVersions: '暂无版本记录。',
-      noWorkspaces: '暂无工作区记录。',
-      addPath: '输入工作区绝对路径',
+      noVersions: '还没有历史版本，改动 .dsh 后会自动出现。',
+      noWorkspaces: '还没有发现工作区。',
+      addPath: '工作区绝对路径',
       add: '添加',
       enable: '启用',
       disable: '停用',
       files: '个文件',
       failed: '失败',
       noSession: '没有活动会话',
-      loading: '加载中…',
+      latestBadge: '最新',
       disabledBadge: '已停用',
       noMessage: '(无说明)',
       repoLabel: '仓库（owner/name，留空自动建）',
+      repoHint: '留空时用 token 账号自动创建 repoName 指定的私有仓库。',
       branchLabel: '分支',
       pollLabel: '轮询秒数',
       layoutLabel: '远端布局',
-      autoLabel: '自动同步',
-      tokenLabel: 'GitHub token',
-      tokenButton: '设置 token',
-      tokenPlaceholder: 'ghp_… 或 github_pat_…',
-      tokenHint: '需要 repo 权限 · 保存到 %USERPROFILE%\\.dsh\\.env · 不写入对话记录',
-      tokenSaved: 'token 已保存并验证',
-      tokenEmpty: '先粘贴 token',
-      tokenConfigured: (days) =>
-        days === null || days === undefined ? '已配置' : days >= 0 ? `已配置，还有 ${days} 天过期` : '已配置但已过期',
-      tokenMissing: '未配置',
-      on: '开',
-      off: '关',
+      layoutWorkspaces: 'workspaces/',
+      layoutRoot: '仓库根',
+      autoNote: (poll) => `自动同步始终默认开启：每 ${poll}s 扫描、静默后自动提交，无需手动操作。`,
       configHint: '保存会写入 profile 配置，插件行会重启一次以应用。',
       configSaved: '配置已保存，插件正在重启…',
       nothingToSave: '没有需要保存的改动。',
-      bannerTokenMissing: '还没有配置 GitHub token，在下方「配置」里粘贴保存后自动备份才会开始。',
+      bannerTokenMissing: '还没有配置 GitHub token，自动备份尚未开始。',
       bannerExpiring: (days) =>
         days >= 0 ? `GitHub token 还有 ${days} 天过期，记得续期。` : 'GitHub token 已过期，请重新保存。',
-      bannerFailing: (names) => `自动同步失败：${names.join('、')}（点「状态」或让 agent 查 dsh_backup_status）`,
-      statusOk: '已发送，结果显示在对话里',
+      bannerFailing: (names) => `自动同步失败：${names.join('、')}`,
+      sent: '已发送，结果显示在对话里',
+      loading: '加载中…',
     }
 
     const STYLES = `
-.dshgb-view { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:32px 40px 48px; font-size:12.5px; line-height:1.55; color:var(--dsw-alias-label-secondary); }
-.dshgb-viewinner { display:flex; flex-direction:column; gap:28px; max-width:900px; margin:0 auto; }
-.dshgb-viewhead { display:flex; flex-direction:column; gap:6px; }
-.dshgb-viewtitlerow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-.dshgb-viewactions { display:flex; align-items:center; gap:8px; margin-left:auto; }
-.dshgb-viewtitle { margin:0; font-size:17px; font-weight:600; letter-spacing:.01em; color:var(--dsw-alias-label-primary); }
-.dshgb-viewhint { margin:0; max-width:64ch; }
-.dshgb-banner { display:flex; gap:8px; align-items:flex-start; padding:10px 12px; border-radius:10px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-state-warn-primary); }
+.dshgb-view { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:28px 40px 56px; font-size:13px; line-height:1.6; color:var(--dsw-alias-label-secondary); scroll-behavior:smooth; }
+.dshgb-inner { display:flex; flex-direction:column; gap:30px; max-width:940px; margin:0 auto; }
+
+/* Header */
+.dshgb-head { display:flex; flex-direction:column; gap:12px; }
+.dshgb-titlerow { display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+.dshgb-titles { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.dshgb-title { margin:0; font-size:19px; font-weight:650; letter-spacing:.01em; color:var(--dsw-alias-label-primary); }
+.dshgb-subtitle { margin:0; font-size:12px; color:var(--dsw-alias-label-secondary); }
+.dshgb-headactions { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.dshgb-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.dshgb-chip { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:999px; background:var(--dsw-alias-bg-layer-1); font-size:11px; color:var(--dsw-alias-label-secondary); white-space:nowrap; transition:background-color .18s ease, transform .18s ease; }
+.dshgb-chip:hover { background:var(--dsw-alias-bg-layer-2); transform:translateY(-1px); }
+.dshgb-chip--warn { color:var(--dsw-alias-state-warn-primary); }
+.dshgb-chip--err { color:var(--dsw-alias-state-error-primary); }
+.dshgb-dot { width:6px; height:6px; border-radius:50%; background:var(--dsw-alias-state-success-primary); }
+.dshgb-dot--warn { background:var(--dsw-alias-state-warn-primary); }
+.dshgb-dot--err { background:var(--dsw-alias-state-error-primary); }
+.dshgb-dot--pulse { animation:dshgb-pulse 2s ease-in-out infinite; }
+
+/* Banner */
+.dshgb-banner { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:12px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-state-warn-primary); animation:dshgb-rise .22s ease-out both; }
 .dshgb-banner--err { color:var(--dsw-alias-state-error-primary); }
-.dshgb-section { display:flex; flex-direction:column; gap:2px; }
-.dshgb-sectionhead { display:flex; align-items:center; gap:10px; padding:0 2px 8px; border-bottom:1px solid var(--dsw-alias-border-l1); }
-.dshgb-sectiontitle { margin:0; font-size:11px; font-weight:600; letter-spacing:.08em; color:var(--dsw-alias-label-secondary); }
-.dshgb-count { font-size:11px; color:var(--dsw-alias-state-idle-primary); font-variant-numeric:tabular-nums; }
-.dshgb-sectionactions { display:flex; align-items:center; gap:2px; margin-left:auto; }
+
+/* Sections */
+.dshgb-section { display:flex; flex-direction:column; gap:0; }
+.dshgb-sectionhead { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:10px; padding:10px 8px; margin:0 -8px 2px; background:var(--dsw-alias-bg-base); border-bottom:1px solid var(--dsw-alias-border-l1); }
+.dshgb-sectiontitle { margin:0; font-size:11px; font-weight:600; letter-spacing:.09em; color:var(--dsw-alias-label-secondary); }
+.dshgb-count { min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--dsw-alias-bg-layer-2); font-size:11px; line-height:18px; text-align:center; color:var(--dsw-alias-label-primary); font-variant-numeric:tabular-nums; }
+.dshgb-sechead-actions { display:flex; align-items:center; gap:2px; margin-left:auto; }
 .dshgb-rows { display:flex; flex-direction:column; }
-.dshgb-item { display:flex; align-items:center; gap:12px; padding:9px 8px; border-radius:8px; transition:background-color .12s ease; }
-.dshgb-item:hover, .dshgb-item:focus-within { background:var(--dsw-alias-bg-layer-1); }
-.dshgb-index { flex:0 0 1.4em; text-align:right; font-size:11px; color:var(--dsw-alias-state-idle-primary); font-variant-numeric:tabular-nums; }
-.dshgb-main { display:flex; flex-direction:column; gap:1px; flex:1 1 auto; min-width:0; }
-.dshgb-name { color:var(--dsw-alias-label-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dshgb-meta { font-size:11px; color:var(--dsw-alias-label-secondary); font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dshgb-badge { margin-left:6px; color:var(--dsw-alias-state-warn-primary); }
-.dshgb-actions { display:flex; align-items:center; gap:0; flex:0 0 auto; }
-.dshgb-textbtn { appearance:none; border:0; background:transparent; color:var(--dsw-alias-label-secondary); font:inherit; font-size:12px; line-height:1.5; padding:4px 9px; border-radius:6px; cursor:pointer; transition:background-color .12s ease, color .12s ease; }
-.dshgb-textbtn:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary); }
-.dshgb-textbtn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:1px; }
+
+/* Rows */
+.dshgb-item { display:flex; align-items:center; gap:14px; min-height:46px; padding:6px 8px; border-radius:10px; transition:background-color .16s ease, transform .16s ease, box-shadow .16s ease; }
+.dshgb-item:hover { background:var(--dsw-alias-bg-layer-1); transform:translateX(2px); }
+.dshgb-item:focus-within { background:var(--dsw-alias-bg-layer-1); box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l2); }
+.dshgb-idx { flex:0 0 1.6em; text-align:right; font-size:11px; color:var(--dsw-alias-state-idle-primary); font-variant-numeric:tabular-nums; }
+.dshgb-main { display:flex; flex-direction:column; gap:2px; flex:1 1 auto; min-width:0; }
+.dshgb-line { display:flex; align-items:center; gap:8px; min-width:0; }
+.dshgb-name { color:var(--dsw-alias-label-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+.dshgb-meta { font-size:11px; color:var(--dsw-alias-label-secondary); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dshgb-mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-badge { flex:0 0 auto; height:18px; padding:0 7px; border-radius:999px; background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-brand-primary); font-size:10.5px; line-height:18px; }
+.dshgb-badge--muted { color:var(--dsw-alias-state-warn-primary); }
+.dshgb-rowactions { display:flex; align-items:center; gap:2px; flex:0 0 auto; opacity:.65; transition:opacity .16s ease; }
+.dshgb-item:hover .dshgb-rowactions, .dshgb-item:focus-within .dshgb-rowactions { opacity:1; }
+
+/* Buttons */
+.dshgb-textbtn { appearance:none; border:0; background:transparent; color:var(--dsw-alias-label-secondary); font:inherit; font-size:12px; line-height:1.5; min-height:28px; padding:3px 9px; border-radius:7px; cursor:pointer; transition:background-color .15s ease, color .15s ease, transform .15s ease; }
+.dshgb-textbtn:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary); transform:translateY(-1px); }
+.dshgb-textbtn:active:not(:disabled) { transform:translateY(0); }
+.dshgb-textbtn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:2px; }
 .dshgb-textbtn:disabled { opacity:.4; cursor:default; }
 .dshgb-textbtn--accent { color:var(--dsw-alias-brand-primary); }
 .dshgb-textbtn--accent:hover:not(:disabled) { color:var(--dsw-alias-brand-primary); background:var(--dsw-alias-bg-layer-2); }
-.dshgb-fieldrow { display:flex; align-items:center; gap:8px; padding:10px 8px 0; }
-.dshgb-field { flex:1 1 260px; min-width:160px; height:32px; box-sizing:border-box; border:0; border-radius:8px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-primary); font:inherit; font-size:12px; padding:0 11px; transition:box-shadow .12s ease, background-color .12s ease; }
+.dshgb-textbtn--ghost:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-1); }
+
+/* Fields */
+.dshgb-fieldrow { display:flex; align-items:center; gap:8px; padding:12px 8px 0; }
+.dshgb-field { flex:1 1 240px; min-width:150px; height:34px; box-sizing:border-box; border:0; border-radius:9px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-label-primary); font:inherit; font-size:12.5px; padding:0 12px; transition:box-shadow .16s ease, background-color .16s ease; }
 .dshgb-field::placeholder { color:var(--dsw-alias-state-idle-primary); }
+.dshgb-field:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); }
 .dshgb-field:focus { outline:none; background:var(--dsw-alias-bg-layer-2); box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary); }
 .dshgb-field:disabled { opacity:.6; }
-.dshgb-empty { padding:16px 8px; color:var(--dsw-alias-label-secondary); }
 .dshgb-hint { font-size:11px; color:var(--dsw-alias-label-secondary); }
-.dshgb-status { font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-status { font-size:11px; color:var(--dsw-alias-label-secondary); animation:dshgb-rise .2s ease-out both; }
 .dshgb-status--ok { color:var(--dsw-alias-state-success-primary); }
 .dshgb-status--err { color:var(--dsw-alias-state-error-primary); }
-.dshgb-box { display:flex; flex-direction:column; gap:8px; margin:6px 8px 10px; padding:12px 14px; border-radius:10px; background:var(--dsw-alias-bg-layer-1); }
-.dshgb-boxhead { display:flex; align-items:center; gap:8px; }
+
+/* Cards (detail / preview / token) */
+.dshgb-box { display:flex; flex-direction:column; gap:10px; margin:4px 8px 8px; padding:14px 16px; border-radius:12px; background:var(--dsw-alias-bg-layer-1); box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1); animation:dshgb-rise .22s ease-out both; }
+.dshgb-boxhead { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .dshgb-boxtitle { color:var(--dsw-alias-label-primary); font-weight:600; }
 .dshgb-boxactions { display:flex; align-items:center; gap:2px; margin-left:auto; }
-.dshgb-file { display:flex; align-items:center; gap:10px; padding:2px 0; font-size:11.5px; }
-.dshgb-filepath { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dsw-alias-label-primary); font-variant-numeric:tabular-nums; }
-.dshgb-filediff { white-space:nowrap; color:var(--dsw-alias-label-secondary); font-variant-numeric:tabular-nums; }
-.dshgb-configgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px 18px; padding:6px 8px 0; }
-.dshgb-fieldgroup { display:flex; flex-direction:column; gap:4px; min-width:0; }
-.dshgb-fieldlabel { font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-file { display:flex; align-items:center; gap:10px; padding:4px 0; font-size:12px; border-radius:6px; transition:background-color .15s ease; }
+.dshgb-file:hover { background:var(--dsw-alias-bg-layer-2); }
+.dshgb-filepath { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dsw-alias-label-primary); }
+.dshgb-filediff { white-space:nowrap; font-variant-numeric:tabular-nums; font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-add { color:var(--dsw-alias-state-success-primary); }
+.dshgb-del { color:var(--dsw-alias-state-error-primary); }
+
+/* Config */
+.dshgb-configgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px 20px; padding:12px 8px 0; }
+.dshgb-group { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.dshgb-grouplabel { font-size:11px; font-weight:500; color:var(--dsw-alias-label-secondary); }
 .dshgb-row { display:flex; align-items:center; gap:2px; flex-wrap:wrap; }
+.dshgb-autonote { display:flex; align-items:center; gap:8px; margin:14px 8px 0; padding:10px 12px; border-radius:10px; background:var(--dsw-alias-bg-layer-1); font-size:12px; color:var(--dsw-alias-label-secondary); }
+
+/* Skeleton + motion */
+.dshgb-skeleton { height:12px; border-radius:6px; background:linear-gradient(90deg, var(--dsw-alias-bg-layer-1) 25%, var(--dsw-alias-bg-layer-2) 37%, var(--dsw-alias-bg-layer-1) 63%); background-size:200% 100%; animation:dshgb-shimmer 1.3s linear infinite; }
+.dshgb-skeletonrow { display:flex; align-items:center; gap:14px; padding:10px 8px; }
+.dshgb-skeletonrow .dshgb-skeleton:nth-child(1) { width:22px; }
+.dshgb-skeletonrow .dshgb-skeleton:nth-child(2) { flex:1 1 auto; max-width:60%; }
+.dshgb-skeletonrow .dshgb-skeleton:nth-child(3) { width:80px; }
+@keyframes dshgb-rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@keyframes dshgb-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+@keyframes dshgb-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .dshgb-view { scroll-behavior:auto; }
+  .dshgb-box, .dshgb-banner, .dshgb-status { animation:none !important; }
+  .dshgb-skeleton { animation:none !important; }
+  .dshgb-item, .dshgb-textbtn, .dshgb-chip, .dshgb-field, .dshgb-rowactions { transition:none !important; }
+  .dshgb-item:hover, .dshgb-textbtn:hover:not(:disabled), .dshgb-chip:hover { transform:none !important; }
+  .dshgb-dot--pulse { animation:none !important; }
+}
 `
 
     const UI_MARKER = /⟦dshb:(.+?)⟧/s
@@ -133,13 +197,12 @@ window.__ModuleLoader__.load({
     function formatWhen(value) {
       try {
         if (!value) return ''
-        return new Date(value).toLocaleString('zh-CN', {
-          hour12: false,
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
+        const date = new Date(value)
+        const diff = Date.now() - date.getTime()
+        if (diff >= 0 && diff < 60_000) return '刚刚'
+        if (diff >= 0 && diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`
+        if (diff >= 0 && diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`
+        return date.toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
       } catch {
         return ''
       }
@@ -244,6 +307,8 @@ window.__ModuleLoader__.load({
         const preview = payloads.preview ?? null
         const config = payloads.config ?? null
 
+        const [versionsLoaded, setVersionsLoaded] = React.useState(false)
+        const [workspacesLoaded, setWorkspacesLoaded] = React.useState(false)
         const [versionBusy, setVersionBusy] = React.useState(false)
         const [workspaceBusy, setWorkspaceBusy] = React.useState(false)
         const [tokenBusy, setTokenBusy] = React.useState(false)
@@ -275,15 +340,25 @@ window.__ModuleLoader__.load({
             })
 
         const refreshVersions = () => {
-          if (versionBusy || !hasSession) return
+          if (!hasSession) return
           setVersionBusy(true)
-          run(TEXT.refresh, '/dsh-backup history 8', { busy: versionBusy, done: () => setVersionBusy(false) })
+          run(TEXT.refresh, '/dsh-backup history 8', {
+            done: () => {
+              setVersionBusy(false)
+              setVersionsLoaded(true)
+            },
+          })
         }
 
         const refreshWorkspaces = () => {
-          if (workspaceBusy || !hasSession) return
+          if (!hasSession) return
           setWorkspaceBusy(true)
-          run(TEXT.refresh, '/dsh-backup workspaces', { busy: workspaceBusy, done: () => setWorkspaceBusy(false) })
+          run(TEXT.refresh, '/dsh-backup workspaces', {
+            done: () => {
+              setWorkspaceBusy(false)
+              setWorkspacesLoaded(true)
+            },
+          })
         }
 
         const refreshStatus = () => {
@@ -313,7 +388,7 @@ window.__ModuleLoader__.load({
           setPreviewHidden(true)
           const only = Array.isArray(paths) && paths.length > 0 ? ` --only ${paths.join(' ')}` : ''
           run(TEXT.rollback, `/dsh-backup rollback ${sha}${only}`, {
-            okText: `${TEXT.rollback} · ${TEXT.statusOk}`,
+            okText: `${TEXT.rollback} · ${TEXT.sent}`,
             done: () => {
               refreshVersions()
               refreshStatus()
@@ -337,7 +412,6 @@ window.__ModuleLoader__.load({
           setWorkspaceBusy(true)
           const operation = entry.disabled ? 'enable' : 'disable'
           run(TEXT.failed, `/dsh-backup workspace ${operation} ${entry.root}`, {
-            busy: workspaceBusy,
             done: () => {
               setWorkspaceBusy(false)
               refreshWorkspaces()
@@ -352,7 +426,7 @@ window.__ModuleLoader__.load({
           dispatch(`/dsh-backup workspace add ${target}`)
             .then(() => {
               setWorkspacePathDraft('')
-              setStatus({ kind: 'ok', text: `${TEXT.add} ${target} · ${TEXT.statusOk}` })
+              setStatus({ kind: 'ok', text: `${TEXT.add} ${target} · ${TEXT.sent}` })
               return dispatch('/dsh-backup workspaces').catch(() => {})
             })
             .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
@@ -411,7 +485,6 @@ window.__ModuleLoader__.load({
             .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
         }
 
-        // Open the token form automatically while no token is configured.
         React.useEffect(() => {
           if (tokenTouched || tokenOpen) return
           if (statusInfo?.token && statusInfo.token.present === false) setTokenOpen(true)
@@ -431,149 +504,42 @@ window.__ModuleLoader__.load({
             {
               key,
               type: 'button',
-              className: `dshgb-textbtn${options.accent ? ' dshgb-textbtn--accent' : ''}`,
+              className: `dshgb-textbtn${options.accent ? ' dshgb-textbtn--accent' : ''}${options.ghost ? ' dshgb-textbtn--ghost' : ''}`,
               disabled: options.disabled === true,
               title: options.title ?? label,
+              'aria-label': options.ariaLabel ?? options.title ?? label,
               onClick,
             },
             label,
           )
 
-        const banner = (() => {
-          const messages = []
-          let level = 'warn'
-          if (statusInfo) {
-            if (!statusInfo.token?.present) {
-              messages.push(TEXT.bannerTokenMissing)
-              level = 'err'
-            } else if (statusInfo.token?.daysLeft !== null && statusInfo.token?.daysLeft !== undefined && statusInfo.token.daysLeft <= 14) {
-              messages.push(TEXT.bannerExpiring(statusInfo.token.daysLeft))
-              if (statusInfo.token.daysLeft < 0) level = 'err'
-            }
-            if (Array.isArray(statusInfo.failingRoots) && statusInfo.failingRoots.length > 0) {
-              messages.push(TEXT.bannerFailing(statusInfo.failingRoots))
-              level = 'err'
-            }
-          }
-          if (messages.length === 0) return null
-          return h(
-            'div',
-            { key: 'banner', className: `dshgb-banner${level === 'err' ? ' dshgb-banner--err' : ''}` },
-            messages.join(' '),
-          )
-        })()
-
-        const versionRows =
-          versions.length === 0
-            ? [h('div', { key: 'empty', className: 'dshgb-empty' }, versionBusy ? TEXT.loading : TEXT.noVersions)]
-            : versions.map((item) =>
-                h('div', { key: item.sha ?? item.n, className: 'dshgb-item' }, [
-                  h('span', { key: 'index', className: 'dshgb-index' }, `${item.n ?? ''}`),
-                  h('div', { key: 'main', className: 'dshgb-main' }, [
-                    h('span', { key: 'name', className: 'dshgb-name', title: item.message ?? '' }, item.message || TEXT.noMessage),
-                    h(
-                      'span',
-                      { key: 'meta', className: 'dshgb-meta' },
-                      [item.short, formatWhen(item.date)].filter(Boolean).join(' · '),
-                    ),
-                  ]),
-                  h('div', { key: 'actions', className: 'dshgb-actions' }, [
-                    textButton('detail', TEXT.detail, () => openDetail(item.sha), { disabled: versionBusy }),
-                    textButton('preview', TEXT.preview, () => openPreview(item.sha), { disabled: versionBusy }),
-                    textButton('rollback', TEXT.rollback, () => rollbackTo(item.sha), { accent: true, disabled: versionBusy }),
-                  ]),
-                ]),
-              )
-
-        const workspaceRows =
-          workspaces.length === 0
-            ? [h('div', { key: 'empty', className: 'dshgb-empty' }, workspaceBusy ? TEXT.loading : TEXT.noWorkspaces)]
-            : workspaces.map((entry) =>
-                h('div', { key: entry.root, className: 'dshgb-item' }, [
-                  h('div', { key: 'main', className: 'dshgb-main' }, [
-                    h('span', { key: 'name', className: 'dshgb-name', title: entry.root }, [
-                      entry.name,
-                      entry.disabled ? h('span', { key: 'badge', className: 'dshgb-badge' }, TEXT.disabledBadge) : null,
-                    ]),
-                    h('span', { key: 'meta', className: 'dshgb-meta' }, `${entry.files ?? 0} ${TEXT.files}`),
-                  ]),
-                  h('div', { key: 'actions', className: 'dshgb-actions' }, [
-                    textButton('toggle', entry.disabled ? TEXT.enable : TEXT.disable, () => switchWorkspace(entry), {
-                      accent: !entry.disabled,
-                      disabled: workspaceBusy,
-                    }),
-                  ]),
-                ]),
-              )
-
-        const detailBox =
-          detail && Array.isArray(detail.files) && !detailHidden
-            ? h('div', { key: 'detail', className: 'dshgb-box' }, [
-                h('div', { key: 'head', className: 'dshgb-boxhead' }, [
-                  h('span', { key: 'title', className: 'dshgb-boxtitle' }, `${TEXT.detailTitle} · ${detail.short ?? ''}`),
-                  h('span', { key: 'meta', className: 'dshgb-meta' }, `${detail.files.length} ${TEXT.files}`),
-                  h('div', { key: 'actions', className: 'dshgb-boxactions' }, [
-                    textButton('close', TEXT.close, () => setDetailHidden(true)),
-                  ]),
-                ]),
-                detail.files.length === 0
-                  ? h('div', { key: 'empty', className: 'dshgb-empty' }, TEXT.noFiles)
-                  : h(
-                      'div',
-                      { key: 'files' },
-                      detail.files.slice(0, 40).map((file) =>
-                        h('div', { key: file.path, className: 'dshgb-file' }, [
-                          h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
-                          h('span', { key: 'diff', className: 'dshgb-filediff' }, `+${file.additions} −${file.deletions}`),
-                          textButton('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), {
-                            accent: true,
-                            disabled: versionBusy,
-                          }),
-                        ]),
-                      ),
-                    ),
-              ])
-            : null
-
-        const previewBox = preview && !previewHidden
-          ? h('div', { key: 'preview', className: 'dshgb-box' }, [
-              h('div', { key: 'head', className: 'dshgb-boxhead' }, [
-                h('span', { key: 'title', className: 'dshgb-boxtitle' }, `${TEXT.previewTitle} · ${preview.short ?? ''}`),
-                h(
-                  'span',
-                  { key: 'meta', className: 'dshgb-meta' },
-                  `写入 ${preview.write?.length ?? 0} · 删除 ${preview.remove?.length ?? 0} · 不变 ${preview.unchanged ?? 0}`,
-                ),
-                h('div', { key: 'actions', className: 'dshgb-boxactions' }, [
-                  textButton('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { accent: true, disabled: versionBusy }),
-                  textButton('cancel', TEXT.cancel, () => setPreviewHidden(true)),
-                ]),
-              ]),
-              ...(preview.write ?? []).slice(0, 20).map((path) =>
-                h('div', { key: `w-${path}`, className: 'dshgb-file' }, [
-                  h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
-                  textButton('only', TEXT.onlyThis, () => rollbackTo(preview.sha, [path]), { accent: true, disabled: versionBusy }),
-                ]),
-              ),
-              ...(preview.remove ?? []).slice(0, 20).map((path) =>
-                h('div', { key: `r-${path}`, className: 'dshgb-file' }, [
-                  h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
-                  h('span', { key: 'diff', className: 'dshgb-filediff' }, '将删除'),
-                ]),
-              ),
-              !preview.write?.length && !preview.remove?.length
-                ? h('div', { key: 'empty', className: 'dshgb-empty' }, '与当前内容一致，无需回滚。')
-                : null,
-            ])
-          : null
-
         const configValues = config ?? {}
+        const poll = configValues.pollSeconds ?? 15
         const tokenState = statusInfo?.token
         const tokenLabel = tokenState?.present
           ? TEXT.tokenConfigured(tokenState.daysLeft)
           : tokenState === null || tokenState === undefined
             ? ''
             : TEXT.tokenMissing
+        const repoChip = configValues.repo
+          ? TEXT.chipRepo(configValues.repo)
+          : TEXT.chipRepoAuto(configValues.repoName ?? 'dsh-backup')
+        const failing = statusInfo?.failingRoots ?? []
+        const bannerMessages = []
+        let bannerLevel = 'warn'
+        if (statusInfo) {
+          if (!tokenState?.present) {
+            bannerMessages.push(TEXT.bannerTokenMissing)
+            bannerLevel = 'err'
+          } else if (tokenState?.daysLeft !== null && tokenState?.daysLeft !== undefined && tokenState.daysLeft <= 14) {
+            bannerMessages.push(TEXT.bannerExpiring(tokenState.daysLeft))
+            if (tokenState.daysLeft < 0) bannerLevel = 'err'
+          }
+          if (failing.length > 0) {
+            bannerMessages.push(TEXT.bannerFailing(failing))
+            bannerLevel = 'err'
+          }
+        }
 
         const tokenPanel = tokenOpen
           ? h('div', { key: 'token', className: 'dshgb-box', role: 'group', 'aria-label': TEXT.tokenButton }, [
@@ -608,74 +574,136 @@ window.__ModuleLoader__.load({
                     }
                   },
                 }),
-                textButton('save-token', tokenBusy ? '…' : '保存 token', saveToken, { accent: true, disabled: tokenBusy }),
+                textButton('save-token', tokenBusy ? '…' : TEXT.saveToken, saveToken, { accent: true, disabled: tokenBusy }),
               ]),
               h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.tokenHint),
             ])
           : null
 
-        const configSection = h('section', { key: 'config', className: 'dshgb-section', 'aria-label': TEXT.config }, [
-          h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
-            h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.config),
-            h('div', { key: 'actions', className: 'dshgb-sectionactions' }, [
-              textButton('save', TEXT.save, saveConfig),
-              textButton('reload', TEXT.refresh, loadConfig),
+        const skeletonRows = (count) =>
+          Array.from({ length: count }, (_, index) =>
+            h('div', { key: `skeleton-${index}`, className: 'dshgb-skeletonrow' }, [
+              h('div', { key: 'a', className: 'dshgb-skeleton' }),
+              h('div', { key: 'b', className: 'dshgb-skeleton' }),
+              h('div', { key: 'c', className: 'dshgb-skeleton' }),
             ]),
-          ]),
-          h('div', { key: 'grid', className: 'dshgb-configgrid' }, [
-            h('label', { key: 'repo', className: 'dshgb-fieldgroup' }, [
-              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.repoLabel),
-              h('input', {
-                key: 'input',
-                className: 'dshgb-field',
-                type: 'text',
-                value: configDraft.repo,
-                placeholder: String(configValues.repo ?? '') || '(空)',
-                spellCheck: false,
-                onChange: (event) => setConfigDraft((current) => ({ ...current, repo: event.target.value })),
-              }),
-            ]),
-            h('label', { key: 'branch', className: 'dshgb-fieldgroup' }, [
-              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.branchLabel),
-              h('input', {
-                key: 'input',
-                className: 'dshgb-field',
-                type: 'text',
-                value: configDraft.branch,
-                placeholder: String(configValues.branch ?? 'main'),
-                spellCheck: false,
-                onChange: (event) => setConfigDraft((current) => ({ ...current, branch: event.target.value })),
-              }),
-            ]),
-            h('label', { key: 'poll', className: 'dshgb-fieldgroup' }, [
-              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.pollLabel),
-              h('input', {
-                key: 'input',
-                className: 'dshgb-field',
-                type: 'text',
-                value: configDraft.pollSeconds,
-                placeholder: String(configValues.pollSeconds ?? '15'),
-                spellCheck: false,
-                onChange: (event) => setConfigDraft((current) => ({ ...current, pollSeconds: event.target.value })),
-              }),
-            ]),
-            h('div', { key: 'layout', className: 'dshgb-fieldgroup' }, [
-              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.layoutLabel),
-              h('div', { key: 'row', className: 'dshgb-row' }, [
-                textButton('ws', 'workspaces/', () => setLayout('workspaces'), {
-                  accent: configValues.layout === 'workspaces',
-                }),
-                textButton('root', '仓库根', () => setLayout('root'), { accent: configValues.layout === 'root' }),
+          )
+
+        const versionRows = !versionsLoaded && versions.length === 0
+          ? skeletonRows(3)
+          : versions.length === 0
+            ? [h('div', { key: 'empty', className: 'dshgb-empty-hint', style: { padding: '16px 8px' } }, TEXT.noVersions)]
+            : versions.map((item, index) =>
+                h('div', { key: item.sha ?? item.n, className: 'dshgb-item' }, [
+                  h('span', { key: 'idx', className: 'dshgb-idx' }, `${item.n ?? index + 1}`),
+                  h('div', { key: 'main', className: 'dshgb-main' }, [
+                    h('div', { key: 'line', className: 'dshgb-line' }, [
+                      index === 0 ? h('span', { key: 'badge', className: 'dshgb-badge' }, TEXT.latestBadge) : null,
+                      h('span', { key: 'name', className: 'dshgb-name', title: item.message ?? '' }, item.message || TEXT.noMessage),
+                    ]),
+                    h('div', { key: 'meta', className: 'dshgb-line' }, [
+                      item.short ? h('span', { key: 'sha', className: 'dshgb-mono' }, item.short) : null,
+                      h('span', { key: 'time', className: 'dshgb-meta' }, formatWhen(item.date)),
+                    ]),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
+                    textButton('detail', TEXT.detail, () => openDetail(item.sha), { ghost: true, disabled: versionBusy }),
+                    textButton('preview', TEXT.preview, () => openPreview(item.sha), { ghost: true, disabled: versionBusy }),
+                    textButton('rollback', TEXT.rollback, () => rollbackTo(item.sha), { accent: true, disabled: versionBusy }),
+                  ]),
+                ]),
+              )
+
+        const workspaceRows = !workspacesLoaded && workspaces.length === 0
+          ? skeletonRows(2)
+          : workspaces.length === 0
+            ? [h('div', { key: 'empty', className: 'dshgb-hint', style: { padding: '16px 8px' } }, TEXT.noWorkspaces)]
+            : workspaces.map((entry) =>
+                h('div', { key: entry.root, className: 'dshgb-item' }, [
+                  h('div', { key: 'main', className: 'dshgb-main' }, [
+                    h('div', { key: 'line', className: 'dshgb-line' }, [
+                      h('span', { key: 'name', className: 'dshgb-name', title: entry.root }, entry.name),
+                      entry.disabled ? h('span', { key: 'badge', className: 'dshgb-badge dshgb-badge--muted' }, TEXT.disabledBadge) : null,
+                    ]),
+                    h('div', { key: 'meta', className: 'dshgb-line' }, [
+                      h('span', { key: 'files', className: 'dshgb-meta' }, `${entry.files ?? 0} ${TEXT.files}`),
+                      h('span', { key: 'root', className: 'dshgb-mono' }, entry.root),
+                    ]),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
+                    textButton('toggle', entry.disabled ? TEXT.enable : TEXT.disable, () => switchWorkspace(entry), {
+                      accent: !entry.disabled,
+                      ghost: entry.disabled,
+                      disabled: workspaceBusy,
+                    }),
+                  ]),
+                ]),
+              )
+
+        const detailBox = detail && Array.isArray(detail.files) && !detailHidden
+          ? h('div', { key: 'detail', className: 'dshgb-box' }, [
+              h('div', { key: 'head', className: 'dshgb-boxhead' }, [
+                h('span', { key: 'title', className: 'dshgb-boxtitle' }, `${TEXT.detailTitle} · ${detail.short ?? ''}`),
+                h('span', { key: 'meta', className: 'dshgb-meta' }, `${detail.files.length} ${TEXT.files}`),
+                h('div', { key: 'actions', className: 'dshgb-boxactions' }, [
+                  textButton('close', TEXT.close, () => setDetailHidden(true)),
+                ]),
               ]),
-            ]),
-          ]),
-          h(
-            'span',
-            { key: 'auto', className: 'dshgb-hint' },
-            `${TEXT.autoLabel}：开（默认，每 ${configValues.pollSeconds ?? 15} 秒检查一次；需要临时关闭可用 /dsh-backup auto off）`,
-          ),
-          h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.configHint),
-        ])
+              detail.files.length === 0
+                ? h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)
+                : h(
+                    'div',
+                    { key: 'files' },
+                    detail.files.slice(0, 40).map((file) =>
+                      h('div', { key: file.path, className: 'dshgb-file' }, [
+                        h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
+                        h('span', { key: 'diff', className: 'dshgb-filediff' }, [
+                          h('span', { key: 'add', className: 'dshgb-add' }, `+${file.additions}`),
+                          ' ',
+                          h('span', { key: 'del', className: 'dshgb-del' }, `−${file.deletions}`),
+                        ]),
+                        textButton('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), {
+                          accent: true,
+                          disabled: versionBusy,
+                        }),
+                      ]),
+                    ),
+                  ),
+            ])
+          : null
+
+        const previewBox = preview && !previewHidden
+          ? h('div', { key: 'preview', className: 'dshgb-box' }, [
+              h('div', { key: 'head', className: 'dshgb-boxhead' }, [
+                h('span', { key: 'title', className: 'dshgb-boxtitle' }, `${TEXT.previewTitle} · ${preview.short ?? ''}`),
+                h(
+                  'span',
+                  { key: 'meta', className: 'dshgb-meta' },
+                  `写入 ${preview.write?.length ?? 0} · 删除 ${preview.remove?.length ?? 0} · 不变 ${preview.unchanged ?? 0}`,
+                ),
+                h('div', { key: 'actions', className: 'dshgb-boxactions' }, [
+                  textButton('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { accent: true, disabled: versionBusy }),
+                  textButton('cancel', TEXT.cancel, () => setPreviewHidden(true)),
+                ]),
+              ]),
+              ...(preview.write ?? []).slice(0, 20).map((path) =>
+                h('div', { key: `w-${path}`, className: 'dshgb-file' }, [
+                  h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
+                  h('span', { key: 'diff', className: 'dshgb-filediff dshgb-add' }, '写入'),
+                  textButton('only', TEXT.onlyThis, () => rollbackTo(preview.sha, [path]), { accent: true, disabled: versionBusy }),
+                ]),
+              ),
+              ...(preview.remove ?? []).slice(0, 20).map((path) =>
+                h('div', { key: `r-${path}`, className: 'dshgb-file' }, [
+                  h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
+                  h('span', { key: 'diff', className: 'dshgb-filediff dshgb-del' }, '删除'),
+                ]),
+              ),
+              !preview.write?.length && !preview.remove?.length
+                ? h('div', { key: 'empty', className: 'dshgb-hint' }, '与当前内容一致，无需回滚。')
+                : null,
+            ])
+          : null
 
         const versionFooter = h('div', { key: 'foot', className: 'dshgb-fieldrow' }, [
           h('input', {
@@ -725,6 +753,73 @@ window.__ModuleLoader__.load({
           textButton('add', TEXT.add, addWorkspace, { accent: true, disabled: workspaceBusy }),
         ])
 
+        const configSection = h('section', { key: 'config', className: 'dshgb-section', 'aria-label': TEXT.config }, [
+          h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
+            h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.config),
+            h('div', { key: 'actions', className: 'dshgb-sechead-actions' }, [
+              textButton('save', TEXT.save, saveConfig),
+              textButton('reload', TEXT.refresh, loadConfig),
+            ]),
+          ]),
+          h('div', { key: 'grid', className: 'dshgb-configgrid' }, [
+            h('label', { key: 'repo', className: 'dshgb-group' }, [
+              h('span', { key: 'label', className: 'dshgb-grouplabel' }, TEXT.repoLabel),
+              h('input', {
+                key: 'input',
+                className: 'dshgb-field',
+                type: 'text',
+                value: configDraft.repo,
+                placeholder: String(configValues.repo ?? '') || '(空)',
+                spellCheck: false,
+                onChange: (event) => setConfigDraft((current) => ({ ...current, repo: event.target.value })),
+              }),
+              h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.repoHint),
+            ]),
+            h('label', { key: 'branch', className: 'dshgb-group' }, [
+              h('span', { key: 'label', className: 'dshgb-grouplabel' }, TEXT.branchLabel),
+              h('input', {
+                key: 'input',
+                className: 'dshgb-field',
+                type: 'text',
+                value: configDraft.branch,
+                placeholder: String(configValues.branch ?? 'main'),
+                spellCheck: false,
+                onChange: (event) => setConfigDraft((current) => ({ ...current, branch: event.target.value })),
+              }),
+            ]),
+            h('label', { key: 'poll', className: 'dshgb-group' }, [
+              h('span', { key: 'label', className: 'dshgb-grouplabel' }, TEXT.pollLabel),
+              h('input', {
+                key: 'input',
+                className: 'dshgb-field',
+                type: 'text',
+                value: configDraft.pollSeconds,
+                placeholder: String(poll),
+                spellCheck: false,
+                onChange: (event) => setConfigDraft((current) => ({ ...current, pollSeconds: event.target.value })),
+              }),
+            ]),
+            h('div', { key: 'layout', className: 'dshgb-group' }, [
+              h('span', { key: 'label', className: 'dshgb-grouplabel' }, TEXT.layoutLabel),
+              h('div', { key: 'row', className: 'dshgb-row' }, [
+                textButton('ws', TEXT.layoutWorkspaces, () => setLayout('workspaces'), {
+                  accent: configValues.layout === 'workspaces',
+                  ghost: configValues.layout !== 'workspaces',
+                }),
+                textButton('root', TEXT.layoutRoot, () => setLayout('root'), {
+                  accent: configValues.layout === 'root',
+                  ghost: configValues.layout !== 'root',
+                }),
+              ]),
+            ]),
+          ]),
+          h('div', { key: 'auto', className: 'dshgb-autonote' }, [
+            h('span', { key: 'dot', className: 'dshgb-dot dshgb-dot--pulse' }),
+            h('span', { key: 'text' }, TEXT.autoNote(poll)),
+          ]),
+          h('span', { key: 'hint', className: 'dshgb-hint', style: { padding: '8px 8px 0', display: 'block' } }, TEXT.configHint),
+        ])
+
         const statusNode = status
           ? h(
               'div',
@@ -737,24 +832,23 @@ window.__ModuleLoader__.load({
             )
           : null
 
-        const section = (key, title, count, actions, children) =>
-          h('section', { key, className: 'dshgb-section', 'aria-label': title }, [
-            h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
-              h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, title),
-              typeof count === 'number' ? h('span', { key: 'count', className: 'dshgb-count' }, `${count}`) : null,
-              h('div', { key: 'actions', className: 'dshgb-sectionactions' }, actions),
-            ]),
-            h('div', { key: 'body', className: 'dshgb-rows' }, children),
-          ])
+        const chip = (key, text, tone) =>
+          h(
+            'span',
+            { key, className: `dshgb-chip${tone === 'warn' ? ' dshgb-chip--warn' : tone === 'err' ? ' dshgb-chip--err' : ''}` },
+            [h('span', { key: 'dot', className: `dshgb-dot${tone === 'warn' ? ' dshgb-dot--warn' : tone === 'err' ? ' dshgb-dot--err' : ''}` }), text],
+          )
 
         return h('div', { className: 'dshgb-view', 'aria-label': TEXT.viewTitle }, [
           h('style', { key: 'style' }, STYLES),
-          h('div', { key: 'inner', className: 'dshgb-viewinner' }, [
-            h('header', { key: 'head', className: 'dshgb-viewhead' }, [
-              h('div', { key: 'titlerow', className: 'dshgb-viewtitlerow' }, [
-                h('h2', { key: 'title', className: 'dshgb-viewtitle' }, TEXT.viewTitle),
-                h('div', { key: 'actions', className: 'dshgb-viewactions' }, [
-                  tokenLabel ? h('span', { key: 'state', className: 'dshgb-hint' }, tokenLabel) : null,
+          h('div', { key: 'inner', className: 'dshgb-inner' }, [
+            h('header', { key: 'head', className: 'dshgb-head' }, [
+              h('div', { key: 'titlerow', className: 'dshgb-titlerow' }, [
+                h('div', { key: 'titles', className: 'dshgb-titles' }, [
+                  h('h2', { key: 'title', className: 'dshgb-title' }, TEXT.viewTitle),
+                  h('p', { key: 'subtitle', className: 'dshgb-subtitle' }, TEXT.viewSubtitle),
+                ]),
+                h('div', { key: 'actions', className: 'dshgb-headactions' }, [
                   textButton(
                     'token',
                     tokenOpen ? TEXT.close : TEXT.tokenButton,
@@ -766,35 +860,53 @@ window.__ModuleLoader__.load({
                   ),
                 ]),
               ]),
-              h('p', { key: 'hint', className: 'dshgb-viewhint' }, TEXT.viewHint),
+              h('div', { key: 'chips', className: 'dshgb-chips' }, [
+                chip('auto', TEXT.chipAuto(poll), 'ok'),
+                chip('repo', repoChip),
+                chip('branch', TEXT.chipBranch(configValues.branch ?? 'main')),
+                chip('layout', TEXT.chipLayout(configValues.layout ?? 'workspaces')),
+                tokenState?.present
+                  ? chip('token', `token · ${tokenLabel}`, tokenState.daysLeft !== null && tokenState.daysLeft <= 14 ? 'warn' : 'ok')
+                  : tokenState === null || tokenState === undefined
+                    ? null
+                    : chip('token', `token · ${TEXT.tokenMissing}`, 'err'),
+              ]),
             ]),
             tokenPanel,
-            banner,
-            section(
-              'versions',
-              TEXT.versions.toUpperCase(),
-              versions.length,
-              [
-                textButton('undo', TEXT.undo, undoRollback, { disabled: versionBusy }),
-                textButton('refresh', versionBusy ? TEXT.loading : TEXT.refresh, refreshVersions, { disabled: versionBusy }),
-              ],
-              [...versionRows, versionFooter],
-            ),
+            bannerMessages.length > 0
+              ? h(
+                  'div',
+                  { key: 'banner', className: `dshgb-banner${bannerLevel === 'err' ? ' dshgb-banner--err' : ''}` },
+                  [h('span', { key: 'dot', className: `dshgb-dot${bannerLevel === 'err' ? ' dshgb-dot--err' : ' dshgb-dot--warn'} dshgb-dot--pulse` }), bannerMessages.join(' ')],
+                )
+              : null,
+            h('section', { key: 'versions', className: 'dshgb-section', 'aria-label': TEXT.versions }, [
+              h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
+                h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.versions),
+                h('span', { key: 'count', className: 'dshgb-count' }, `${versions.length}`),
+                h('div', { key: 'actions', className: 'dshgb-sechead-actions' }, [
+                  textButton('undo', TEXT.undo, undoRollback, { disabled: versionBusy }),
+                  textButton('refresh', versionBusy ? TEXT.loading : TEXT.refresh, refreshVersions, { disabled: versionBusy }),
+                ]),
+              ]),
+              h('div', { key: 'rows', className: 'dshgb-rows' }, versionRows),
+              versionFooter,
+            ]),
             detailBox,
             previewBox,
-            section(
-              'workspaces',
-              TEXT.workspaces,
-              workspaces.length,
-              [
-                textButton('refresh', workspaceBusy ? TEXT.loading : TEXT.refresh, refreshWorkspaces, {
-                  disabled: workspaceBusy,
-                }),
-              ],
-              [...workspaceRows, workspaceFooter],
-            ),
+            h('section', { key: 'workspaces', className: 'dshgb-section', 'aria-label': TEXT.workspaces }, [
+              h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
+                h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.workspaces),
+                h('span', { key: 'count', className: 'dshgb-count' }, `${workspaces.length}`),
+                h('div', { key: 'actions', className: 'dshgb-sechead-actions' }, [
+                  textButton('refresh', workspaceBusy ? TEXT.loading : TEXT.refresh, refreshWorkspaces, { disabled: workspaceBusy }),
+                ]),
+              ]),
+              h('div', { key: 'rows', className: 'dshgb-rows' }, workspaceRows),
+              workspaceFooter,
+            ]),
             configSection,
-            h('div', { key: 'rollback-hint', className: 'dshgb-hint' }, TEXT.rollbackHint),
+            h('div', { key: 'hint', className: 'dshgb-hint' }, TEXT.rollbackHint),
             statusNode,
           ]),
         ])
