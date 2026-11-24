@@ -125,6 +125,9 @@ test('client renders the snapshot view shell', async () => {
   assert.ok(ui.byText('立即提交'))
   assert.ok(ui.byText('拉取'))
   assert.ok(ui.byText('设置 token'))
+  assert.ok(ui.text().includes('var(--dsw-alias-bg-base)'), 'theme uses host tokens')
+  assert.ok(ui.text().includes('.dshgb-overlay'), 'modal styles present')
+  assert.ok(!ui.text().includes('#0d1020'), 'old dark palette removed')
 })
 
 test('client shows commit badges, diff and health', async () => {
@@ -146,13 +149,32 @@ test('client shows commit badges, diff and health', async () => {
   assert.ok(['自动', '手动', '回滚'].every((label) => ui.text().includes(label)))
   assert.ok(!ui.text().includes('2026-01-01T00:00:00Z'))
 
+  const diffButton = ui.byText('改动')
+  assert.ok(diffButton, 'row has diff action')
+  diffButton.props.onClick()
+  ui.render()
+  assert.equal(ui.byClass('dshgb-overlay').length, 1, 'detail opens as a modal')
   ui.emit({ kind: 'diff', short: 'aaa1111111', files: [{ path: 'skills/a.md', additions: 1, deletions: 1, patch: '@@ -1 +1 @@\n-old\n+new' }] })
+  assert.equal(ui.elements().filter((element) => element.props.className === 'dshgb-dialog').length, 1)
   assert.ok(ui.text().includes('new'))
   assert.ok(ui.byClass('dshgb-diffline--add').length >= 1)
   assert.ok(ui.byClass('dshgb-diffline--del').length >= 1)
+  ui.byText('关闭').props.onClick()
+  ui.render()
+  assert.equal(ui.byClass('dshgb-overlay').length, 0, 'modal closes')
 
+  ui.byText('详情').props.onClick()
+  ui.render()
+  ui.emit({ kind: 'detail', short: 'aaa1111111', files: [{ path: 'skills/a.md', additions: 1, deletions: 1 }] })
+  assert.ok(ui.text().includes('skills/a.md'))
+  ui.byText('关闭').props.onClick()
+  ui.render()
+
+  ui.byText('体检').props.onClick()
+  ui.render()
   ui.emit({ kind: 'health', repository: 'o/r', repoSizeKb: 2048, remoteCount: 3, localCount: 3, same: 2, mismatch: ['x.md'], missing: [], extra: [] })
-  assert.ok(ui.text().includes('仓库体检'))
+  assert.equal(ui.elements().filter((element) => element.props.className === 'dshgb-dialog').length, 1, 'health opens as a modal')
+  assert.ok(ui.text().includes('2048'))
   assert.ok(ui.text().includes('内容不一致 1'))
 })
 

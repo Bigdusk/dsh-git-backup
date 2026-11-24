@@ -111,219 +111,148 @@ window.__ModuleLoader__.load({
     // Web3-style dark glass dashboard: self-contained palette so the panel keeps
     // its identity under both host light and dark themes.
     const STYLES = `
-.dshgb-wrap { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:24px; font-size:13px; line-height:1.6; }
-.dshgb-shell {
-  position:relative; box-sizing:border-box; max-width:1060px; margin:0 auto; padding:24px 24px 22px; border-radius:24px;
-  background:
-    radial-gradient(900px 380px at 100% -10%, rgba(124,92,255,.28), transparent 60%),
-    radial-gradient(700px 320px at -10% 110%, rgba(34,211,238,.16), transparent 60%),
-    linear-gradient(165deg, #0d1020 0%, #0a0c16 45%, #070810 100%);
-  border:1px solid rgba(255,255,255,.09);
-  box-shadow:0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.07);
-  color:#a7b0d6; overflow:hidden; isolation:isolate;
-}
-.dshgb-shell::before {
-  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-  background-size:28px 28px;
-  -webkit-mask-image:radial-gradient(85% 65% at 50% 0%, #000 30%, transparent 100%);
-  mask-image:radial-gradient(85% 65% at 50% 0%, #000 30%, transparent 100%);
-}
-.dshgb-orb { position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; pointer-events:none; z-index:0; }
-.dshgb-orb--a { width:260px; height:260px; top:-120px; right:-40px; background:#6d4bff; animation:dshgb-float 14s ease-in-out infinite; }
-.dshgb-orb--b { width:220px; height:220px; bottom:-140px; left:-60px; background:#0ea5b7; opacity:.35; animation:dshgb-float 18s ease-in-out infinite reverse; }
-.dshgb-inner { position:relative; z-index:1; display:flex; flex-direction:column; gap:16px; }
-
-/* header */
+.dshgb-wrap { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:24px; font-size:13px; line-height:1.6; color:var(--dsw-alias-label-secondary); }
+.dshgb-shell { position:relative; box-sizing:border-box; max-width:1060px; margin:0 auto; padding:24px 24px 22px; border-radius:20px; background:var(--dsw-alias-bg-base); border:1px solid var(--dsw-alias-border-l1); box-shadow:0 24px 70px -48px rgba(15,23,42,.5); }
+.dshgb-inner { display:flex; flex-direction:column; gap:16px; }
 .dshgb-head { display:flex; flex-direction:column; gap:14px; }
 .dshgb-titlerow { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-.dshgb-mark {
-  flex:none; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff;
-  background:linear-gradient(135deg, #7c5cff 0%, #4f8cff 55%, #22d3ee 100%);
-  box-shadow:0 8px 24px -8px rgba(124,92,255,.9), inset 0 1px 0 rgba(255,255,255,.35);
-}
-.dshgb-titles { display:flex; flex-direction:column; gap:0; min-width:0; }
-.dshgb-title {
-  margin:0; font-size:20px; font-weight:700; letter-spacing:.01em;
-  background:linear-gradient(92deg, #ffffff 0%, #d7d2ff 55%, #8be9fd 100%);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-}
-.dshgb-subtitle { margin:0; font-size:12px; color:#818aae; }
-.dshgb-headactions { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.dshgb-mark { flex:none; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; background-color:var(--dsw-alias-brand-primary); background-image:linear-gradient(145deg, rgba(255,255,255,.35), rgba(255,255,255,0)); box-shadow:0 8px 20px -10px rgba(15,23,42,.55), inset 0 1px 0 rgba(255,255,255,.35); }
+.dshgb-titles { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.dshgb-title { margin:0; font-size:20px; font-weight:650; letter-spacing:.01em; color:var(--dsw-alias-label-primary); }
+.dshgb-subtitle { margin:0; font-size:12px; color:var(--dsw-alias-label-secondary); }
+.dshgb-headactions { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .dshgb-chips { display:flex; flex-wrap:wrap; gap:8px; }
-.dshgb-chip {
-  display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px; border-radius:999px; font-size:11px; color:#aab3d6;
-  background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.10); backdrop-filter:blur(8px); white-space:nowrap;
-}
-.dshgb-chip--warn { color:#fbbf24; border-color:rgba(251,191,36,.35); }
-.dshgb-chip--err { color:#fb7185; border-color:rgba(251,113,133,.4); }
-.dshgb-dot { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 10px rgba(52,211,153,.9); }
-.dshgb-dot--warn { background:#fbbf24; box-shadow:0 0 10px rgba(251,191,36,.9); }
-.dshgb-dot--err { background:#fb7185; box-shadow:0 0 10px rgba(251,113,133,.9); }
+.dshgb-chip { display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px; border-radius:999px; font-size:11px; color:var(--dsw-alias-label-secondary); background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-border-l1); white-space:nowrap; }
+.dshgb-chip--warn { color:var(--dsw-alias-state-warn-primary); border-color:var(--dsw-alias-state-warn-primary); }
+.dshgb-chip--err { color:var(--dsw-alias-state-error-primary); border-color:var(--dsw-alias-state-error-primary); }
+.dshgb-dot { width:6px; height:6px; border-radius:50%; background:var(--dsw-alias-state-success-primary); }
+.dshgb-dot--warn { background:var(--dsw-alias-state-warn-primary); }
+.dshgb-dot--err { background:var(--dsw-alias-state-error-primary); }
 .dshgb-dot--pulse { animation:dshgb-pulse 2.2s ease-in-out infinite; }
-
-/* stat tiles */
 .dshgb-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
-.dshgb-stat {
-  position:relative; display:flex; flex-direction:column; gap:2px; padding:12px 14px; border-radius:14px;
-  background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); overflow:hidden;
-}
-.dshgb-stat::after { content:''; position:absolute; inset:auto 0 0 0; height:1px; background:linear-gradient(90deg, transparent, rgba(124,92,255,.8), transparent); opacity:.7; }
-.dshgb-statlabel { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#6f789c; }
-.dshgb-statvalue { font-size:22px; font-weight:700; color:#eef1ff; font-variant-numeric:tabular-nums; line-height:1.2; }
-.dshgb-statunit { font-size:11px; color:#7d86a8; margin-left:4px; font-weight:500; }
-.dshgb-statmeta { font-size:11px; color:#8b93b8; }
-
-/* buttons */
-.dshgb-btn { appearance:none; font:inherit; font-size:12px; line-height:1.4; min-height:32px; padding:5px 13px; border-radius:10px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; transition:transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease, color .16s ease; }
-.dshgb-btn:focus-visible { outline:2px solid #8be9fd; outline-offset:2px; }
+.dshgb-stat { display:flex; flex-direction:column; gap:2px; padding:12px 14px; border-radius:14px; background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-border-l1); }
+.dshgb-statlabel { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--dsw-alias-label-secondary); }
+.dshgb-statvalue { font-size:22px; font-weight:650; color:var(--dsw-alias-label-primary); font-variant-numeric:tabular-nums; line-height:1.2; }
+.dshgb-statunit { font-size:11px; color:var(--dsw-alias-label-secondary); margin-left:4px; font-weight:500; }
+.dshgb-statmeta { font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-btn { appearance:none; font:inherit; font-size:12px; line-height:1.4; min-height:32px; padding:5px 13px; border-radius:10px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; transition:background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.dshgb-btn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:2px; }
 .dshgb-btn:disabled { opacity:.45; cursor:default; }
-.dshgb-btn--primary {
-  border:1px solid rgba(255,255,255,.18); color:#fff;
-  background:linear-gradient(135deg, #7c5cff 0%, #5b7cff 55%, #22d3ee 140%);
-  box-shadow:0 8px 22px -10px rgba(124,92,255,.95), inset 0 1px 0 rgba(255,255,255,.32);
-}
-.dshgb-btn--primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 28px -10px rgba(124,92,255,1), inset 0 1px 0 rgba(255,255,255,.4); }
-.dshgb-btn--secondary { border:1px solid rgba(255,255,255,.16); color:#dfe4ff; background:rgba(255,255,255,.055); backdrop-filter:blur(6px); }
-.dshgb-btn--secondary:hover:not(:disabled) { background:rgba(255,255,255,.10); transform:translateY(-1px); }
-.dshgb-btn--soft { border:1px solid transparent; color:#9aa3c7; background:transparent; }
-.dshgb-btn--soft:hover:not(:disabled) { color:#e6eaff; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10); }
+.dshgb-btn--primary { border:1px solid transparent; color:#fff; background-color:var(--dsw-alias-brand-primary); background-image:linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0)); }
+.dshgb-btn--primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 10px 24px -12px rgba(15,23,42,.55); }
+.dshgb-btn--secondary { border:1px solid var(--dsw-alias-border-l2); color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-layer-1); }
+.dshgb-btn--secondary:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); transform:translateY(-1px); }
+.dshgb-btn--soft { border:1px solid transparent; color:var(--dsw-alias-label-secondary); background:transparent; }
+.dshgb-btn--soft:hover:not(:disabled) { color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-layer-1); border-color:var(--dsw-alias-border-l1); }
 .dshgb-btn--tiny { min-height:28px; padding:3px 10px; font-size:11.5px; border-radius:8px; }
-
-/* cards */
-.dshgb-card {
-  display:flex; flex-direction:column; gap:12px; padding:16px 18px 14px; border-radius:18px;
-  background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.09);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
-  animation:dshgb-rise .24s ease-out both;
-}
+.dshgb-card { display:flex; flex-direction:column; gap:12px; padding:16px 18px 14px; border-radius:16px; background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-border-l1); animation:dshgb-rise .2s ease-out both; }
 .dshgb-cardhead { display:flex; align-items:flex-start; gap:12px; }
 .dshgb-cardtitle { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.dshgb-cardname { display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:650; color:#eef1ff; }
-.dshgb-cardname svg { color:#8be9fd; }
-.dshgb-carddesc { font-size:11px; color:#7d86a8; }
-.dshgb-count { min-width:22px; height:22px; padding:0 7px; border-radius:999px; font-size:11px; line-height:20px; text-align:center; color:#c9d2ff; background:rgba(124,92,255,.18); border:1px solid rgba(124,92,255,.35); font-variant-numeric:tabular-nums; }
+.dshgb-cardname { display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:650; color:var(--dsw-alias-label-primary); }
+.dshgb-cardname svg { color:var(--dsw-alias-brand-primary); }
+.dshgb-carddesc { font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-count { min-width:22px; height:22px; padding:0 7px; border-radius:999px; font-size:11px; line-height:20px; text-align:center; color:var(--dsw-alias-brand-primary); background:var(--dsw-alias-bg-layer-2); border:1px solid var(--dsw-alias-border-l1); font-variant-numeric:tabular-nums; }
 .dshgb-cardactions { display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap; }
-
-/* version rows */
 .dshgb-rows { display:flex; flex-direction:column; }
-.dshgb-row {
-  position:relative; display:grid; grid-template-columns:30px 132px minmax(0,1fr) auto; align-items:center; gap:14px;
-  padding:11px 10px; border-top:1px solid rgba(255,255,255,.06); border-radius:12px;
-  transition:background-color .16s ease, transform .16s ease;
-}
+.dshgb-row { position:relative; display:grid; grid-template-columns:30px 132px minmax(0,1fr) auto; align-items:center; gap:14px; padding:11px 10px; border-top:1px solid var(--dsw-alias-border-l1); border-radius:12px; transition:background-color .15s ease, transform .15s ease; }
 .dshgb-row:first-child { border-top:0; }
-.dshgb-row:hover { background:rgba(255,255,255,.05); transform:translateX(2px); }
-.dshgb-row--latest { background:linear-gradient(90deg, rgba(124,92,255,.16), rgba(124,92,255,0) 45%); }
-.dshgb-row--latest::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:2px; border-radius:2px; background:linear-gradient(180deg,#7c5cff,#22d3ee); box-shadow:0 0 12px rgba(124,92,255,.9); }
-.dshgb-idx { text-align:right; font-size:11px; color:#5f688a; font-variant-numeric:tabular-nums; }
+.dshgb-row:hover { background:var(--dsw-alias-bg-layer-2); transform:translateX(2px); }
+.dshgb-row--latest { background:var(--dsw-alias-bg-layer-2); }
+.dshgb-row--latest::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:2px; border-radius:2px; background:var(--dsw-alias-brand-primary); }
+.dshgb-idx { text-align:right; font-size:11px; color:var(--dsw-alias-state-idle-primary); font-variant-numeric:tabular-nums; }
 .dshgb-metacol { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.dshgb-sha { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:#8be9fd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dshgb-time { font-size:11px; color:#7d86a8; }
+.dshgb-sha { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:var(--dsw-alias-brand-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dshgb-time { font-size:11px; color:var(--dsw-alias-label-secondary); }
 .dshgb-msg { display:flex; align-items:center; gap:9px; min-width:0; }
-.dshgb-msgtick { flex:none; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.16); }
-.dshgb-row--latest .dshgb-msgtick { background:#22d3ee; box-shadow:0 0 10px rgba(34,211,238,.95); }
-.dshgb-msgtext { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#dfe4ff; }
-.dshgb-row--latest .dshgb-msgtext { color:#ffffff; font-weight:600; }
+.dshgb-msgtick { flex:none; width:5px; height:5px; border-radius:50%; background:var(--dsw-alias-border-l2); }
+.dshgb-row--latest .dshgb-msgtick { background:var(--dsw-alias-brand-primary); }
+.dshgb-msgtext { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dsw-alias-label-primary); }
+.dshgb-row--latest .dshgb-msgtext { font-weight:600; }
 .dshgb-rowactions { display:flex; align-items:center; gap:4px; }
-
-/* workspaces */
-.dshgb-wsrow { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px; padding:10px; border-top:1px solid rgba(255,255,255,.06); border-radius:12px; transition:background-color .16s ease, transform .16s ease; }
+.dshgb-wsrow { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px; padding:10px; border-top:1px solid var(--dsw-alias-border-l1); border-radius:12px; transition:background-color .15s ease, transform .15s ease; }
 .dshgb-wsrow:first-child { border-top:0; }
-.dshgb-wsrow:hover { background:rgba(255,255,255,.05); transform:translateX(2px); }
+.dshgb-wsrow:hover { background:var(--dsw-alias-bg-layer-2); transform:translateX(2px); }
 .dshgb-wsmain { display:flex; flex-direction:column; gap:2px; min-width:0; }
-.dshgb-wsname { display:flex; align-items:center; gap:8px; color:#eef1ff; font-size:13px; font-weight:600; }
-.dshgb-badge { height:18px; padding:0 7px; border-radius:999px; border:1px solid rgba(251,191,36,.4); background:rgba(251,191,36,.12); color:#fbbf24; font-size:10.5px; line-height:16px; }
-.dshgb-wspath { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:#7d86a8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dshgb-meta { font-size:11px; color:#8b93b8; font-variant-numeric:tabular-nums; }
-.dshgb-kind { flex:none; height:18px; padding:0 7px; border-radius:999px; border:1px solid rgba(255,255,255,.14); font-size:10.5px; line-height:16px; color:#9aa3c7; }
-.dshgb-kind--ok { color:#34d399; border-color:rgba(52,211,153,.35); background:rgba(52,211,153,.08); }
-.dshgb-kind--warn { color:#fbbf24; border-color:rgba(251,191,36,.35); background:rgba(251,191,36,.08); }
-.dshgb-kind--muted { color:#8b93b8; background:rgba(255,255,255,.04); }
-.dshgb-search { display:flex; gap:8px; align-items:center; padding:2px 0; }
-.dshgb-search .dshgb-field { flex:1 1 auto; width:auto; height:32px; }
-.dshgb-diff { display:flex; flex-direction:column; gap:1px; padding:8px 10px; border-radius:10px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08); overflow:auto; max-height:300px; }
-.dshgb-diffline { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; white-space:pre; color:#c6cdf0; }
-.dshgb-diffline--add { color:#34d399; }
-.dshgb-diffline--del { color:#fb7185; }
-.dshgb-diffline--hunk { color:#8be9fd; }
-.dshgb-healthrow { display:flex; gap:12px; flex-wrap:wrap; }
-
-/* fields */
-.dshgb-field {
-  display:block; width:100%; box-sizing:border-box; height:38px; border-radius:11px; padding:0 12px;
-  border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:#eef1ff;
-  font:inherit; font-size:12.5px; transition:border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
-}
-.dshgb-field::placeholder { color:#5f688a; }
-.dshgb-field:hover:not(:disabled) { border-color:rgba(124,92,255,.55); }
-.dshgb-field:focus { outline:none; border-color:#7c5cff; box-shadow:0 0 0 3px rgba(124,92,255,.22); background:rgba(255,255,255,.07); }
+.dshgb-wsname { display:flex; align-items:center; gap:8px; color:var(--dsw-alias-label-primary); font-size:13px; font-weight:600; }
+.dshgb-badge { height:18px; padding:0 7px; border-radius:999px; border:1px solid var(--dsw-alias-state-warn-primary); color:var(--dsw-alias-state-warn-primary); font-size:10.5px; line-height:16px; }
+.dshgb-wspath { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:var(--dsw-alias-label-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dshgb-meta { font-size:11px; color:var(--dsw-alias-label-secondary); font-variant-numeric:tabular-nums; }
+.dshgb-kind { flex:none; height:18px; padding:0 7px; border-radius:999px; border:1px solid var(--dsw-alias-border-l1); font-size:10.5px; line-height:16px; color:var(--dsw-alias-label-secondary); background:var(--dsw-alias-bg-base); }
+.dshgb-kind--ok { color:var(--dsw-alias-state-success-primary); border-color:var(--dsw-alias-state-success-primary); }
+.dshgb-kind--warn { color:var(--dsw-alias-state-warn-primary); border-color:var(--dsw-alias-state-warn-primary); }
+.dshgb-kind--muted { color:var(--dsw-alias-label-secondary); }
+.dshgb-field { display:block; width:100%; box-sizing:border-box; height:38px; border-radius:10px; padding:0 12px; border:1px solid var(--dsw-alias-border-l2); background:var(--dsw-alias-bg-base); color:var(--dsw-alias-label-primary); font:inherit; font-size:12.5px; transition:border-color .15s ease, box-shadow .15s ease; }
+.dshgb-field::placeholder { color:var(--dsw-alias-state-idle-primary); }
+.dshgb-field:hover:not(:disabled) { border-color:var(--dsw-alias-brand-primary); }
+.dshgb-field:focus { outline:none; border-color:var(--dsw-alias-brand-primary); box-shadow:0 0 0 3px var(--dsw-alias-bg-layer-2); }
 .dshgb-field:disabled { opacity:.6; }
-.dshgb-footrow { display:flex; align-items:center; gap:8px; padding-top:12px; border-top:1px solid rgba(255,255,255,.06); }
+.dshgb-footrow { display:flex; align-items:center; gap:8px; padding-top:12px; border-top:1px solid var(--dsw-alias-border-l1); }
 .dshgb-footrow .dshgb-field { flex:1 1 auto; width:auto; }
 .dshgb-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px 16px; }
 .dshgb-group { display:flex; flex-direction:column; gap:6px; min-width:0; }
-.dshgb-grouplabel { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#6f789c; }
-.dshgb-helper { font-size:11px; color:#7d86a8; min-height:16px; }
-.dshgb-seg { display:inline-flex; border:1px solid rgba(255,255,255,.14); border-radius:11px; overflow:hidden; width:fit-content; background:rgba(255,255,255,.04); }
-.dshgb-segbtn { appearance:none; border:0; background:transparent; color:#9aa3c7; font:inherit; font-size:12px; padding:6px 13px; min-height:36px; cursor:pointer; transition:background-color .16s ease, color .16s ease; }
-.dshgb-segbtn:hover { color:#e6eaff; }
-.dshgb-segbtn--active { background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(79,140,255,.95)); color:#fff; box-shadow:0 4px 14px -6px rgba(124,92,255,.9); }
-.dshgb-segbtn:focus-visible { outline:2px solid #8be9fd; outline-offset:-2px; }
-.dshgb-info { display:flex; align-items:center; gap:9px; padding:10px 12px; border-radius:11px; background:rgba(124,92,255,.08); border:1px solid rgba(124,92,255,.22); font-size:11.5px; color:#b7bff0; }
-.dshgb-autorow { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); }
+.dshgb-grouplabel { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--dsw-alias-label-secondary); }
+.dshgb-helper { font-size:11px; color:var(--dsw-alias-label-secondary); min-height:16px; }
+.dshgb-seg { display:inline-flex; border:1px solid var(--dsw-alias-border-l2); border-radius:10px; overflow:hidden; width:fit-content; background:var(--dsw-alias-bg-layer-1); }
+.dshgb-segbtn { appearance:none; border:0; background:transparent; color:var(--dsw-alias-label-secondary); font:inherit; font-size:12px; padding:6px 13px; min-height:36px; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.dshgb-segbtn:hover { color:var(--dsw-alias-label-primary); }
+.dshgb-segbtn--active { color:#fff; background-color:var(--dsw-alias-brand-primary); background-image:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0)); }
+.dshgb-segbtn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:-2px; }
+.dshgb-info { display:flex; align-items:center; gap:9px; padding:10px 12px; border-radius:10px; background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-border-l1); font-size:11.5px; color:var(--dsw-alias-label-secondary); }
+.dshgb-autorow { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-border-l1); }
 .dshgb-autotext { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.dshgb-autotitle { display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:#eef1ff; }
-.dshgb-switch {
-  appearance:none; flex:none; width:46px; height:26px; border-radius:999px; cursor:pointer; position:relative; margin-left:auto;
-  border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); transition:background-color .18s ease, border-color .18s ease;
-}
-.dshgb-switch:focus-visible { outline:2px solid #8be9fd; outline-offset:2px; }
-.dshgb-switch::after {
-  content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#c7cdf0;
-  transition:transform .18s ease, background-color .18s ease, box-shadow .18s ease;
-}
-.dshgb-switch--on { border-color:rgba(124,92,255,.6); background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(34,211,238,.85)); box-shadow:0 0 18px -4px rgba(124,92,255,.85); }
-.dshgb-switch--on::after { transform:translateX(20px); background:#ffffff; box-shadow:0 0 10px rgba(255,255,255,.8); }
+.dshgb-autotitle { display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--dsw-alias-label-primary); }
+.dshgb-switch { appearance:none; flex:none; width:46px; height:26px; border-radius:999px; cursor:pointer; position:relative; margin-left:auto; border:1px solid var(--dsw-alias-border-l2); background:var(--dsw-alias-bg-layer-2); transition:background-color .18s ease, border-color .18s ease; }
+.dshgb-switch:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:2px; }
+.dshgb-switch::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(15,23,42,.35); transition:transform .18s ease; }
+.dshgb-switch--on { border-color:var(--dsw-alias-brand-primary); background-color:var(--dsw-alias-brand-primary); }
+.dshgb-switch--on::after { transform:translateX(20px); }
 .dshgb-switch:disabled { opacity:.5; cursor:default; }
-
-/* nested sub-cards */
-.dshgb-subcard {
-  display:flex; flex-direction:column; gap:8px; padding:13px 15px; border-radius:14px;
-  background:rgba(8,10,20,.55); border:1px solid rgba(139,233,253,.18); backdrop-filter:blur(6px);
-  animation:dshgb-rise .2s ease-out both;
-}
-.dshgb-subhead { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
-.dshgb-subname { font-size:12.5px; font-weight:650; color:#eef1ff; }
-.dshgb-sublactions { margin-left:auto; display:flex; gap:4px; }
+.dshgb-search { display:flex; gap:8px; align-items:center; padding:2px 0; }
+.dshgb-search .dshgb-field { flex:1 1 auto; width:auto; height:32px; }
 .dshgb-file { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:9px; font-size:12px; transition:background-color .15s ease; }
-.dshgb-file:hover { background:rgba(255,255,255,.05); }
-.dshgb-filepath { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#dfe4ff; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; }
+.dshgb-file:hover { background:var(--dsw-alias-bg-layer-2); }
+.dshgb-filepath { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dsw-alias-label-primary); font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; }
 .dshgb-filediff { flex:none; font-size:11px; font-variant-numeric:tabular-nums; }
-.dshgb-add { color:#34d399; }
-.dshgb-del { color:#fb7185; }
-
-/* misc */
-.dshgb-hint { font-size:11px; color:#7d86a8; }
+.dshgb-add { color:var(--dsw-alias-state-success-primary); }
+.dshgb-del { color:var(--dsw-alias-state-error-primary); }
+.dshgb-diff { display:flex; flex-direction:column; gap:1px; padding:10px 12px; border-radius:10px; background:var(--dsw-alias-bg-base); border:1px solid var(--dsw-alias-border-l1); overflow:auto; max-height:340px; }
+.dshgb-diffline { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; white-space:pre; color:var(--dsw-alias-label-primary); }
+.dshgb-diffline--add { color:var(--dsw-alias-state-success-primary); }
+.dshgb-diffline--del { color:var(--dsw-alias-state-error-primary); }
+.dshgb-diffline--hunk { color:var(--dsw-alias-brand-primary); }
+.dshgb-healthrow { display:flex; gap:12px; flex-wrap:wrap; }
+.dshgb-hint { font-size:11px; color:var(--dsw-alias-label-secondary); }
 .dshgb-status { font-size:11.5px; animation:dshgb-rise .2s ease-out both; }
-.dshgb-status--ok { color:#34d399; }
-.dshgb-status--err { color:#fb7185; }
-.dshgb-banner { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:14px; font-size:12px; color:#fbbf24; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.28); animation:dshgb-rise .2s ease-out both; }
-.dshgb-banner--err { color:#fb7185; background:rgba(251,113,133,.08); border-color:rgba(251,113,133,.3); }
-.dshgb-empty { padding:16px 10px; font-size:12px; color:#7d86a8; }
-.dshgb-skeleton { height:11px; border-radius:6px; background:linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.12) 37%, rgba(255,255,255,.05) 63%); background-size:200% 100%; animation:dshgb-shimmer 1.3s linear infinite; }
-.dshgb-skeletonrow { display:grid; grid-template-columns:30px 132px minmax(0,1fr); gap:14px; align-items:center; padding:13px 10px; border-top:1px solid rgba(255,255,255,.06); }
+.dshgb-status--ok { color:var(--dsw-alias-state-success-primary); }
+.dshgb-status--err { color:var(--dsw-alias-state-error-primary); }
+.dshgb-banner { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:12px; font-size:12px; color:var(--dsw-alias-state-warn-primary); background:var(--dsw-alias-bg-layer-1); border:1px solid var(--dsw-alias-state-warn-primary); animation:dshgb-rise .2s ease-out both; }
+.dshgb-banner--err { color:var(--dsw-alias-state-error-primary); border-color:var(--dsw-alias-state-error-primary); }
+.dshgb-empty { padding:16px 10px; font-size:12px; color:var(--dsw-alias-label-secondary); }
+.dshgb-skeleton { height:11px; border-radius:6px; background:linear-gradient(90deg, var(--dsw-alias-bg-layer-1) 25%, var(--dsw-alias-bg-layer-2) 37%, var(--dsw-alias-bg-layer-1) 63%); background-size:200% 100%; animation:dshgb-shimmer 1.3s linear infinite; }
+.dshgb-skeletonrow { display:grid; grid-template-columns:30px 132px minmax(0,1fr); gap:14px; align-items:center; padding:13px 10px; border-top:1px solid var(--dsw-alias-border-l1); }
 .dshgb-skeletonrow:first-child { border-top:0; }
-
+.dshgb-overlay { position:fixed; inset:0; z-index:2147483000; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(15,23,42,.44); animation:dshgb-fade .16s ease-out; }
+.dshgb-dialog { display:flex; flex-direction:column; width:min(800px,100%); max-height:min(82vh,780px); border-radius:16px; background:var(--dsw-alias-bg-base); border:1px solid var(--dsw-alias-border-l1); box-shadow:0 40px 100px -40px rgba(15,23,42,.6); overflow:hidden; animation:dshgb-pop .18s ease-out; }
+.dshgb-dialoghead { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--dsw-alias-border-l1); flex-wrap:wrap; }
+.dshgb-dialogtitle { font-size:14px; font-weight:650; color:var(--dsw-alias-label-primary); }
+.dshgb-dialogbody { padding:14px 16px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+.dshgb-dialogfoot { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid var(--dsw-alias-border-l1); }
+.dshgb-dialogclose { margin-left:auto; }
 @keyframes dshgb-rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 @keyframes dshgb-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
 @keyframes dshgb-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
-@keyframes dshgb-float { 0%,100% { transform:translate3d(0,0,0); } 50% { transform:translate3d(-14px,18px,0); } }
+@keyframes dshgb-fade { from { opacity:0; } to { opacity:1; } }
+@keyframes dshgb-pop { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:none; } }
+@media (max-width:720px) {
+  .dshgb-wrap { padding:12px; }
+  .dshgb-shell { padding:16px; border-radius:16px; }
+  .dshgb-row { grid-template-columns:minmax(0,1fr) auto; }
+  .dshgb-idx, .dshgb-metacol { display:none; }
+  .dshgb-dialog { max-height:88vh; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .dshgb-card, .dshgb-subcard, .dshgb-banner, .dshgb-status { animation:none !important; }
+  .dshgb-card, .dshgb-banner, .dshgb-status, .dshgb-dialog, .dshgb-overlay { animation:none !important; }
   .dshgb-skeleton { animation:none !important; }
-  .dshgb-orb { animation:none !important; }
   .dshgb-row, .dshgb-wsrow, .dshgb-btn, .dshgb-field, .dshgb-file, .dshgb-segbtn { transition:none !important; }
   .dshgb-row:hover, .dshgb-wsrow:hover, .dshgb-btn:hover:not(:disabled) { transform:none !important; }
   .dshgb-dot--pulse { animation:none !important; }
@@ -521,10 +450,7 @@ window.__ModuleLoader__.load({
         const [versionQuery, setVersionQuery] = React.useState('')
         const [fileQuery, setFileQuery] = React.useState('')
         const [status, setStatus] = React.useState(null)
-        const [detailHidden, setDetailHidden] = React.useState(false)
-        const [previewHidden, setPreviewHidden] = React.useState(false)
-        const [diffHidden, setDiffHidden] = React.useState(false)
-        const [healthHidden, setHealthHidden] = React.useState(false)
+        const [modal, setModal] = React.useState(null)
 
         const dispatch = dispatchFor(props?.sessionId)
         const hasSession = Boolean(props?.sessionId)
@@ -578,19 +504,19 @@ window.__ModuleLoader__.load({
 
         const openDetail = (sha) => {
           if (!hasSession) return
-          setDetailHidden(false)
+          setModal({ kind: 'detail', sha })
           run(TEXT.detail, `/dsh-backup detail ${sha}`)
         }
 
         const openPreview = (sha) => {
           if (!hasSession) return
-          setPreviewHidden(false)
+          setModal({ kind: 'preview', sha })
           run(TEXT.preview, `/dsh-backup preview ${sha}`)
         }
 
         const rollbackTo = (sha, paths) => {
           if (!hasSession) return
-          setPreviewHidden(true)
+          setModal(null)
           const only = Array.isArray(paths) && paths.length > 0 ? ` --only ${paths.join(' ')}` : ''
           run(TEXT.rollback, `/dsh-backup rollback ${sha}${only}`, {
             okText: `${TEXT.rollback} · ${TEXT.sent}`,
@@ -636,13 +562,13 @@ window.__ModuleLoader__.load({
 
         const openDiff = (sha, filePath) => {
           if (!hasSession) return
-          setDiffHidden(false)
+          setModal({ kind: 'diff', sha, path: filePath })
           run(TEXT.diffTitle, `/dsh-backup diff ${sha}${filePath ? ` ${filePath}` : ''}`)
         }
 
         const runHealth = () => {
           if (!hasSession) return
-          setHealthHidden(false)
+          setModal({ kind: 'health' })
           run(TEXT.healthBtn, '/dsh-backup health')
         }
 
@@ -929,14 +855,48 @@ window.__ModuleLoader__.load({
               )
 
         const fileFilter = fileQuery.trim().toLowerCase()
-        const detailFiles = (detail?.files ?? []).filter((file) => !fileFilter || file.path.toLowerCase().includes(fileFilter))
-        const detailBox = detail && Array.isArray(detail.files) && !detailHidden
-          ? h('div', { key: 'detail', className: 'dshgb-subcard' }, [
-              h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subname' }, `${TEXT.detailTitle} · ${detail.short ?? ''}`),
-                h('span', { key: 'meta', className: 'dshgb-meta' }, `${detail.files.length} ${TEXT.files}`),
-                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setDetailHidden(true), { tiny: true })]),
-              ]),
+
+        const closeModal = () => setModal(null)
+
+        const dialogTitle = (kind) =>
+          kind === 'diff'
+            ? TEXT.diffTitle
+            : kind === 'health'
+              ? TEXT.healthTitle
+              : kind === 'preview'
+                ? TEXT.previewTitle
+                : TEXT.detailTitle
+
+        const patchLines = (patch) =>
+          String(patch)
+            .split('\n')
+            .slice(0, 300)
+            .map((line, index) =>
+              h(
+                'span',
+                {
+                  key: index,
+                  className: `dshgb-diffline${
+                    line.startsWith('+')
+                      ? ' dshgb-diffline--add'
+                      : line.startsWith('-')
+                        ? ' dshgb-diffline--del'
+                        : line.startsWith('@@')
+                          ? ' dshgb-diffline--hunk'
+                          : ''
+                  }`,
+                },
+                line || ' ',
+              ),
+            )
+
+        const loadingBody = () => [h('div', { key: 'loading', className: 'dshgb-skeleton', style: { width: '60%' } })]
+
+        const modalBody = () => {
+          if (modal.kind === 'detail') {
+            if (!detail) return loadingBody()
+            const files = (detail.files ?? []).filter((file) => !fileFilter || file.path.toLowerCase().includes(fileFilter))
+            return [
               h('div', { key: 'search', className: 'dshgb-search' }, [
                 h('input', {
                   key: 'q',
@@ -945,125 +905,138 @@ window.__ModuleLoader__.load({
                   value: fileQuery,
                   placeholder: TEXT.searchFiles,
                   spellCheck: false,
+                  'aria-label': TEXT.searchFiles,
                   onChange: (event) => setFileQuery(event.target.value),
                 }),
               ]),
-              detailFiles.length === 0
+              files.length === 0
                 ? h('div', { key: 'empty', className: 'dshgb-hint' }, fileFilter ? '没有匹配的文件。' : TEXT.noFiles)
-                : h('div', { key: 'files' }, detailFiles.slice(0, 40).map((file) =>
-                    h('div', { key: file.path, className: 'dshgb-file' }, [
-                      h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
-                      h('span', { key: 'diff', className: 'dshgb-filediff' }, [
-                        h('span', { key: 'add', className: 'dshgb-add' }, `+${file.additions}`),
-                        ' ',
-                        h('span', { key: 'del', className: 'dshgb-del' }, `−${file.deletions}`),
-                      ]),
-                      btn('show-diff', TEXT.diffBtn, () => openDiff(detail.sha, file.path), { tiny: true, disabled: versionBusy }),
-                      btn('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
-                    ]),
-                  )),
-            ])
-          : null
-
-        const diffBox = diff && Array.isArray(diff.files) && !diffHidden
-          ? h('div', { key: 'diff', className: 'dshgb-subcard' }, [
-              h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subname' }, `${TEXT.diffTitle} · ${diff.short ?? ''}`),
-                h('span', { key: 'meta', className: 'dshgb-meta' }, `${diff.files.length} ${TEXT.files}`),
-                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setDiffHidden(true), { tiny: true })]),
-              ]),
-              diff.files.length === 0
-                ? h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)
                 : h(
                     'div',
-                    { key: 'bodies' },
-                    diff.files.slice(0, 6).flatMap((file) => [
-                      h('div', { key: `h-${file.path}`, className: 'dshgb-file' }, [
+                    { key: 'files' },
+                    files.slice(0, 100).map((file) =>
+                      h('div', { key: file.path, className: 'dshgb-file' }, [
                         h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
-                        h('span', { key: 'meta', className: 'dshgb-meta' }, `+${file.additions} −${file.deletions}`),
+                        h('span', { key: 'diff', className: 'dshgb-filediff' }, [
+                          h('span', { key: 'add', className: 'dshgb-add' }, `+${file.additions}`),
+                          ' ',
+                          h('span', { key: 'del', className: 'dshgb-del' }, `−${file.deletions}`),
+                        ]),
+                        btn('show-diff', TEXT.diffBtn, () => openDiff(detail.sha, file.path), { tiny: true, disabled: versionBusy }),
+                        btn('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                       ]),
-                      file.patch
-                        ? h(
-                            'div',
-                            { key: `p-${file.path}`, className: 'dshgb-diff' },
-                            String(file.patch)
-                              .split('\n')
-                              .slice(0, 200)
-                              .map((line, lineIndex) =>
-                                h(
-                                  'span',
-                                  {
-                                    key: lineIndex,
-                                    className: `dshgb-diffline${
-                                      line.startsWith('+')
-                                        ? ' dshgb-diffline--add'
-                                        : line.startsWith('-')
-                                          ? ' dshgb-diffline--del'
-                                          : line.startsWith('@@')
-                                            ? ' dshgb-diffline--hunk'
-                                            : ''
-                                    }`,
-                                  },
-                                  line || ' ',
-                                ),
-                              ),
-                          )
-                        : h('div', { key: `p-${file.path}`, className: 'dshgb-hint' }, TEXT.noDiff),
-                    ]),
+                    ),
                   ),
-            ])
-          : null
-
-        const healthBox = health && !healthHidden
-          ? h('div', { key: 'health', className: 'dshgb-subcard' }, [
-              h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subname' }, TEXT.healthTitle),
-                h('span', { key: 'meta', className: 'dshgb-meta' }, `${health.repository} · ${TEXT.healthSize(health.repoSizeKb)}`),
-                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setHealthHidden(true), { tiny: true })]),
-              ]),
-              h('div', { key: 'row', className: 'dshgb-healthrow' }, [
-                h('span', { key: 'counts', className: 'dshgb-meta' }, `远端 ${health.remoteCount} · 本地 ${health.localCount} · 一致 ${health.same}`),
-                (health.mismatch ?? []).length ? h('span', { key: 'm', className: 'dshgb-meta dshgb-del' }, `内容不一致 ${health.mismatch.length}`) : null,
-                (health.missing ?? []).length ? h('span', { key: 'x', className: 'dshgb-meta dshgb-add' }, `本地未备份 ${health.missing.length}`) : null,
-                (health.extra ?? []).length ? h('span', { key: 'e', className: 'dshgb-meta' }, `远端多出 ${health.extra.length}`) : null,
-              ]),
-              (health.mismatch ?? []).length === 0 && (health.missing ?? []).length === 0 && (health.extra ?? []).length === 0
-                ? h('div', { key: 'ok', className: 'dshgb-hint' }, TEXT.healthOk)
-                : h('div', { key: 'paths', className: 'dshgb-hint' }, [...(health.mismatch ?? []), ...(health.missing ?? [])].slice(0, 10).join('、')),
-            ])
-          : null
-
-        const previewBox = preview && !previewHidden
-          ? h('div', { key: 'preview', className: 'dshgb-subcard' }, [
-              h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subname' }, `${TEXT.previewTitle} · ${preview.short ?? ''}`),
-                h(
-                  'span',
-                  { key: 'meta', className: 'dshgb-meta' },
-                  `写入 ${preview.write?.length ?? 0} · 删除 ${preview.remove?.length ?? 0} · 不变 ${preview.unchanged ?? 0}`,
-                ),
-                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [
-                  btn('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
-                  btn('cancel', TEXT.cancel, () => setPreviewHidden(true), { tiny: true }),
-                ]),
-              ]),
-              ...(preview.write ?? []).slice(0, 20).map((path) =>
+            ]
+          }
+          if (modal.kind === 'preview') {
+            if (!preview) return loadingBody()
+            const rows = []
+            for (const path of (preview.write ?? []).slice(0, 60)) {
+              rows.push(
                 h('div', { key: `w-${path}`, className: 'dshgb-file' }, [
                   h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
-                  h('span', { key: 'diff', className: 'dshgb-filediff dshgb-add' }, '写入'),
+                  h('span', { key: 'kind', className: 'dshgb-filediff dshgb-add' }, '写入'),
                   btn('only', TEXT.onlyThis, () => rollbackTo(preview.sha, [path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                 ]),
-              ),
-              ...(preview.remove ?? []).slice(0, 20).map((path) =>
+              )
+            }
+            for (const path of (preview.remove ?? []).slice(0, 60)) {
+              rows.push(
                 h('div', { key: `r-${path}`, className: 'dshgb-file' }, [
                   h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
-                  h('span', { key: 'diff', className: 'dshgb-filediff dshgb-del' }, '删除'),
+                  h('span', { key: 'kind', className: 'dshgb-filediff dshgb-del' }, '删除'),
                 ]),
-              ),
-              !preview.write?.length && !preview.remove?.length
-                ? h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.identical)
-                : null,
-            ])
+              )
+            }
+            if (rows.length === 0) rows.push(h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.identical))
+            return rows
+          }
+          if (modal.kind === 'diff') {
+            if (!diff) return loadingBody()
+            const files = (diff.files ?? []).filter((file) => !modal.path || file.path.includes(modal.path) || !file.path)
+            if (files.length === 0) return [h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)]
+            const blocks = []
+            for (const file of files.slice(0, 8)) {
+              blocks.push(
+                h('div', { key: `h-${file.path}`, className: 'dshgb-file' }, [
+                  h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
+                  h('span', { key: 'meta', className: 'dshgb-meta' }, `+${file.additions} −${file.deletions}`),
+                ]),
+              )
+              if (file.patch) blocks.push(h('div', { key: `p-${file.path}`, className: 'dshgb-diff' }, patchLines(file.patch)))
+              else blocks.push(h('div', { key: `p-${file.path}`, className: 'dshgb-hint' }, TEXT.noDiff))
+            }
+            return blocks
+          }
+          if (!health) return loadingBody()
+          const problems = [...(health.mismatch ?? []), ...(health.missing ?? [])]
+          return [
+            h('div', { key: 'row', className: 'dshgb-healthrow' }, [
+              h('span', { key: 'counts', className: 'dshgb-meta' }, `${health.repository} · 约 ${TEXT.healthSize(health.repoSizeKb)} · 远端 ${health.remoteCount} / 本地 ${health.localCount} · 一致 ${health.same}`),
+            ]),
+            h('div', { key: 'row2', className: 'dshgb-healthrow' }, [
+              (health.mismatch ?? []).length ? h('span', { key: 'm', className: 'dshgb-meta dshgb-del' }, `内容不一致 ${health.mismatch.length}`) : null,
+              (health.missing ?? []).length ? h('span', { key: 'x', className: 'dshgb-meta dshgb-add' }, `本地未备份 ${health.missing.length}`) : null,
+              (health.extra ?? []).length ? h('span', { key: 'e', className: 'dshgb-meta' }, `远端多出 ${health.extra.length}`) : null,
+            ]),
+            problems.length === 0 && (health.extra ?? []).length === 0
+              ? h('div', { key: 'ok', className: 'dshgb-hint' }, TEXT.healthOk)
+              : h('div', { key: 'paths', className: 'dshgb-hint' }, problems.slice(0, 20).join('、')),
+          ]
+        }
+
+        React.useEffect(() => {
+          if (!modal || typeof document === 'undefined') return undefined
+          const onKey = (event) => {
+            if (event.key === 'Escape') setModal(null)
+          }
+          document.addEventListener('keydown', onKey)
+          return () => document.removeEventListener('keydown', onKey)
+        }, [modal])
+
+        const modalNode = modal
+          ? h(
+              'div',
+              {
+                key: 'modal',
+                className: 'dshgb-overlay',
+                onClick: (event) => {
+                  if (event.target === event.currentTarget) closeModal()
+                },
+              },
+              [
+                h(
+                  'div',
+                  {
+                    key: 'dialog',
+                    className: 'dshgb-dialog',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': dialogTitle(modal.kind),
+                  },
+                  [
+                    h('div', { key: 'head', className: 'dshgb-dialoghead' }, [
+                      h('span', { key: 'title', className: 'dshgb-dialogtitle' }, dialogTitle(modal.kind)),
+                      modal.sha ? h('span', { key: 'sha', className: 'dshgb-meta' }, String(modal.sha).slice(0, 10)) : null,
+                      modal.kind === 'diff' && modal.path ? h('span', { key: 'path', className: 'dshgb-meta' }, modal.path) : null,
+                      modal.kind === 'preview' && preview
+                        ? h('span', { key: 'counts', className: 'dshgb-meta' }, `写入 ${preview.write?.length ?? 0} · 删除 ${preview.remove?.length ?? 0} · 不变 ${preview.unchanged ?? 0}`)
+                        : null,
+                      h('span', { key: 'spacer', style: { flex: '1 1 auto' } }),
+                      btn('close', TEXT.close, closeModal, { tiny: true }),
+                    ]),
+                    h('div', { key: 'body', className: 'dshgb-dialogbody' }, modalBody()),
+                    modal.kind === 'preview' && preview
+                      ? h('div', { key: 'foot', className: 'dshgb-dialogfoot' }, [
+                          btn('cancel', TEXT.cancel, closeModal, { tiny: true }),
+                          btn('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
+                        ])
+                      : null,
+                  ],
+                ),
+              ],
+            )
           : null
 
         const versionFooter = h('div', { key: 'foot', className: 'dshgb-footrow' }, [
@@ -1306,10 +1279,6 @@ window.__ModuleLoader__.load({
                   }),
                 ]),
                 h('div', { key: 'rows', className: 'dshgb-rows' }, versionRows),
-                detailBox,
-                previewBox,
-                diffBox,
-                healthBox,
                 versionFooter,
                 h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.hintRollback),
               ]),
@@ -1330,6 +1299,7 @@ window.__ModuleLoader__.load({
               statusNode,
             ]),
           ]),
+          modalNode,
         ])
       }
     }
