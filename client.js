@@ -12,7 +12,7 @@ window.__ModuleLoader__.load({
       tokenButton: '设置 token',
       tokenLabel: 'GitHub token',
       tokenPlaceholder: 'ghp_… 或 github_pat_…',
-      tokenHint: '需要 repo 权限，会保存到 %USERPROFILE%\\.dsh\\.env，不写入对话记录',
+      tokenHint: '需要 repo 权限，保存到 %USERPROFILE%\\.dsh\\.env，不写入对话记录',
       tokenSaved: 'token 已保存并验证，自动备份已开始',
       tokenEmpty: '先粘贴 token',
       tokenConfigured: (days) =>
@@ -23,6 +23,16 @@ window.__ModuleLoader__.load({
       chipRepoAuto: (name) => `仓库 · 自动建仓（${name}）`,
       chipBranch: (branch) => `分支 · ${branch}`,
       chipLayout: (layout) => (layout === 'root' ? '布局 · 仓库根' : '布局 · workspaces/'),
+      statVersions: '历史版本',
+      statWorkspaces: '参与备份的工作区',
+      statPoll: '轮询间隔',
+      statToken: 'token 状态',
+      statUnitVersions: '个快照',
+      statUnitWorkspaces: '个目录',
+      statUnitPoll: '秒',
+      descVersions: '选一个历史快照预览或恢复；最新一条高亮显示。',
+      descWorkspaces: '这里列出的目录会参与自动备份，可随时停用。',
+      descConfig: '仓库、分支与同步节奏；保存后插件会重启一次。',
       versions: '版本回滚',
       workspaces: '工作区',
       config: '配置',
@@ -73,125 +83,195 @@ window.__ModuleLoader__.load({
       identical: '与当前内容一致，无需回滚。',
     }
 
+    // Web3-style dark glass dashboard: self-contained palette so the panel keeps
+    // its identity under both host light and dark themes.
     const STYLES = `
-.dshgb-view { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:26px 32px 48px; font-size:13px; line-height:1.6; color:var(--dsw-alias-label-secondary); }
-.dshgb-inner { display:flex; flex-direction:column; gap:16px; max-width:980px; margin:0 auto; }
+.dshgb-wrap { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:24px; font-size:13px; line-height:1.6; }
+.dshgb-shell {
+  position:relative; box-sizing:border-box; max-width:1060px; margin:0 auto; padding:24px 24px 22px; border-radius:24px;
+  background:
+    radial-gradient(900px 380px at 100% -10%, rgba(124,92,255,.28), transparent 60%),
+    radial-gradient(700px 320px at -10% 110%, rgba(34,211,238,.16), transparent 60%),
+    linear-gradient(165deg, #0d1020 0%, #0a0c16 45%, #070810 100%);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.07);
+  color:#a7b0d6; overflow:hidden; isolation:isolate;
+}
+.dshgb-shell::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size:28px 28px;
+  -webkit-mask-image:radial-gradient(85% 65% at 50% 0%, #000 30%, transparent 100%);
+  mask-image:radial-gradient(85% 65% at 50% 0%, #000 30%, transparent 100%);
+}
+.dshgb-orb { position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; pointer-events:none; z-index:0; }
+.dshgb-orb--a { width:260px; height:260px; top:-120px; right:-40px; background:#6d4bff; animation:dshgb-float 14s ease-in-out infinite; }
+.dshgb-orb--b { width:220px; height:220px; bottom:-140px; left:-60px; background:#0ea5b7; opacity:.35; animation:dshgb-float 18s ease-in-out infinite reverse; }
+.dshgb-inner { position:relative; z-index:1; display:flex; flex-direction:column; gap:16px; }
 
 /* header */
-.dshgb-head { display:flex; flex-direction:column; gap:12px; padding:2px 2px 4px; }
-.dshgb-titlerow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-.dshgb-mark { flex:none; width:34px; height:34px; border-radius:10px; border:1px solid var(--dsw-alias-border-l1); background:var(--dsw-alias-bg-layer-1); display:flex; align-items:center; justify-content:center; color:var(--dsw-alias-brand-primary); }
-.dshgb-titles { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.dshgb-title { margin:0; font-size:18px; font-weight:650; letter-spacing:.01em; color:var(--dsw-alias-label-primary); }
-.dshgb-subtitle { margin:0; font-size:12px; }
-.dshgb-headactions { margin-left:auto; display:flex; align-items:center; gap:8px; }
-.dshgb-chips { display:flex; flex-wrap:wrap; gap:6px; }
-.dshgb-chip { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:999px; border:1px solid var(--dsw-alias-border-l1); font-size:11px; color:var(--dsw-alias-label-secondary); white-space:nowrap; }
-.dshgb-chip--warn { color:var(--dsw-alias-state-warn-primary); }
-.dshgb-chip--err { color:var(--dsw-alias-state-error-primary); }
-.dshgb-dot { width:6px; height:6px; border-radius:50%; background:var(--dsw-alias-state-success-primary); }
-.dshgb-dot--warn { background:var(--dsw-alias-state-warn-primary); }
-.dshgb-dot--err { background:var(--dsw-alias-state-error-primary); }
-.dshgb-dot--pulse { animation:dshgb-pulse 2.4s ease-in-out infinite; }
+.dshgb-head { display:flex; flex-direction:column; gap:14px; }
+.dshgb-titlerow { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.dshgb-mark {
+  flex:none; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff;
+  background:linear-gradient(135deg, #7c5cff 0%, #4f8cff 55%, #22d3ee 100%);
+  box-shadow:0 8px 24px -8px rgba(124,92,255,.9), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.dshgb-titles { display:flex; flex-direction:column; gap:0; min-width:0; }
+.dshgb-title {
+  margin:0; font-size:20px; font-weight:700; letter-spacing:.01em;
+  background:linear-gradient(92deg, #ffffff 0%, #d7d2ff 55%, #8be9fd 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.dshgb-subtitle { margin:0; font-size:12px; color:#818aae; }
+.dshgb-headactions { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.dshgb-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.dshgb-chip {
+  display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px; border-radius:999px; font-size:11px; color:#aab3d6;
+  background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.10); backdrop-filter:blur(8px); white-space:nowrap;
+}
+.dshgb-chip--warn { color:#fbbf24; border-color:rgba(251,191,36,.35); }
+.dshgb-chip--err { color:#fb7185; border-color:rgba(251,113,133,.4); }
+.dshgb-dot { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 10px rgba(52,211,153,.9); }
+.dshgb-dot--warn { background:#fbbf24; box-shadow:0 0 10px rgba(251,191,36,.9); }
+.dshgb-dot--err { background:#fb7185; box-shadow:0 0 10px rgba(251,113,133,.9); }
+.dshgb-dot--pulse { animation:dshgb-pulse 2.2s ease-in-out infinite; }
 
-/* cards */
-.dshgb-card { display:flex; flex-direction:column; gap:10px; padding:14px 16px 12px; border:1px solid var(--dsw-alias-border-l1); border-radius:14px; background:var(--dsw-alias-bg-layer-1); animation:dshgb-rise .2s ease-out both; }
-.dshgb-cardhead { display:flex; align-items:center; gap:10px; padding-bottom:10px; border-bottom:1px solid var(--dsw-alias-border-l1); }
-.dshgb-cardtitle { display:inline-flex; align-items:center; gap:8px; margin:0; font-size:13px; font-weight:600; color:var(--dsw-alias-label-primary); }
-.dshgb-cardtitle svg { color:var(--dsw-alias-label-secondary); }
-.dshgb-count { min-width:20px; height:20px; padding:0 6px; border-radius:999px; border:1px solid var(--dsw-alias-border-l1); font-size:11px; line-height:18px; text-align:center; color:var(--dsw-alias-label-secondary); font-variant-numeric:tabular-nums; }
-.dshgb-cardactions { display:flex; align-items:center; gap:6px; margin-left:auto; }
+/* stat tiles */
+.dshgb-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.dshgb-stat {
+  position:relative; display:flex; flex-direction:column; gap:2px; padding:12px 14px; border-radius:14px;
+  background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); overflow:hidden;
+}
+.dshgb-stat::after { content:''; position:absolute; inset:auto 0 0 0; height:1px; background:linear-gradient(90deg, transparent, rgba(124,92,255,.8), transparent); opacity:.7; }
+.dshgb-statlabel { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#6f789c; }
+.dshgb-statvalue { font-size:22px; font-weight:700; color:#eef1ff; font-variant-numeric:tabular-nums; line-height:1.2; }
+.dshgb-statunit { font-size:11px; color:#7d86a8; margin-left:4px; font-weight:500; }
+.dshgb-statmeta { font-size:11px; color:#8b93b8; }
 
 /* buttons */
-.dshgb-btn { appearance:none; font:inherit; font-size:12px; line-height:1.4; min-height:29px; padding:4px 11px; border-radius:8px; cursor:pointer; white-space:nowrap; transition:background-color .15s ease, border-color .15s ease, color .15s ease, transform .15s ease; }
-.dshgb-btn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:2px; }
+.dshgb-btn { appearance:none; font:inherit; font-size:12px; line-height:1.4; min-height:32px; padding:5px 13px; border-radius:10px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; transition:transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease, color .16s ease; }
+.dshgb-btn:focus-visible { outline:2px solid #8be9fd; outline-offset:2px; }
 .dshgb-btn:disabled { opacity:.45; cursor:default; }
-.dshgb-btn--primary { border:1px solid var(--dsw-alias-brand-primary); background:transparent; color:var(--dsw-alias-brand-primary); }
-.dshgb-btn--primary:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); transform:translateY(-1px); }
-.dshgb-btn--secondary { border:1px solid var(--dsw-alias-border-l2); background:var(--dsw-alias-bg-base); color:var(--dsw-alias-label-primary); }
-.dshgb-btn--secondary:hover:not(:disabled) { background:var(--dsw-alias-bg-layer-2); transform:translateY(-1px); }
-.dshgb-btn--soft { border:1px solid transparent; background:transparent; color:var(--dsw-alias-label-secondary); }
-.dshgb-btn--soft:hover:not(:disabled) { border-color:var(--dsw-alias-border-l1); color:var(--dsw-alias-label-primary); transform:translateY(-1px); }
+.dshgb-btn--primary {
+  border:1px solid rgba(255,255,255,.18); color:#fff;
+  background:linear-gradient(135deg, #7c5cff 0%, #5b7cff 55%, #22d3ee 140%);
+  box-shadow:0 8px 22px -10px rgba(124,92,255,.95), inset 0 1px 0 rgba(255,255,255,.32);
+}
+.dshgb-btn--primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 28px -10px rgba(124,92,255,1), inset 0 1px 0 rgba(255,255,255,.4); }
+.dshgb-btn--secondary { border:1px solid rgba(255,255,255,.16); color:#dfe4ff; background:rgba(255,255,255,.055); backdrop-filter:blur(6px); }
+.dshgb-btn--secondary:hover:not(:disabled) { background:rgba(255,255,255,.10); transform:translateY(-1px); }
+.dshgb-btn--soft { border:1px solid transparent; color:#9aa3c7; background:transparent; }
+.dshgb-btn--soft:hover:not(:disabled) { color:#e6eaff; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10); }
+.dshgb-btn--tiny { min-height:28px; padding:3px 10px; font-size:11.5px; border-radius:8px; }
+
+/* cards */
+.dshgb-card {
+  display:flex; flex-direction:column; gap:12px; padding:16px 18px 14px; border-radius:18px;
+  background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+  animation:dshgb-rise .24s ease-out both;
+}
+.dshgb-cardhead { display:flex; align-items:flex-start; gap:12px; }
+.dshgb-cardtitle { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.dshgb-cardname { display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:650; color:#eef1ff; }
+.dshgb-cardname svg { color:#8be9fd; }
+.dshgb-carddesc { font-size:11px; color:#7d86a8; }
+.dshgb-count { min-width:22px; height:22px; padding:0 7px; border-radius:999px; font-size:11px; line-height:20px; text-align:center; color:#c9d2ff; background:rgba(124,92,255,.18); border:1px solid rgba(124,92,255,.35); font-variant-numeric:tabular-nums; }
+.dshgb-cardactions { display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap; }
 
 /* version rows */
 .dshgb-rows { display:flex; flex-direction:column; }
-.dshgb-row { display:grid; grid-template-columns:32px 128px minmax(0,1fr) auto; align-items:center; gap:12px; padding:10px 8px; border-top:1px solid var(--dsw-alias-border-l1); border-radius:10px; transition:background-color .16s ease, transform .16s ease; }
+.dshgb-row {
+  position:relative; display:grid; grid-template-columns:30px 132px minmax(0,1fr) auto; align-items:center; gap:14px;
+  padding:11px 10px; border-top:1px solid rgba(255,255,255,.06); border-radius:12px;
+  transition:background-color .16s ease, transform .16s ease;
+}
 .dshgb-row:first-child { border-top:0; }
-.dshgb-row:hover { background:var(--dsw-alias-bg-base); transform:translateX(2px); }
-.dshgb-row--latest { box-shadow:inset 2px 0 0 var(--dsw-alias-brand-primary); }
-.dshgb-idx { text-align:right; font-size:11px; color:var(--dsw-alias-state-idle-primary); font-variant-numeric:tabular-nums; }
+.dshgb-row:hover { background:rgba(255,255,255,.05); transform:translateX(2px); }
+.dshgb-row--latest { background:linear-gradient(90deg, rgba(124,92,255,.16), rgba(124,92,255,0) 45%); }
+.dshgb-row--latest::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:2px; border-radius:2px; background:linear-gradient(180deg,#7c5cff,#22d3ee); box-shadow:0 0 12px rgba(124,92,255,.9); }
+.dshgb-idx { text-align:right; font-size:11px; color:#5f688a; font-variant-numeric:tabular-nums; }
 .dshgb-metacol { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.dshgb-sha { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:var(--dsw-alias-label-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dshgb-time { font-size:11px; color:var(--dsw-alias-label-secondary); }
-.dshgb-msg { display:flex; align-items:center; gap:8px; min-width:0; }
-.dshgb-msgtick { flex:none; width:6px; height:6px; border-radius:50%; background:transparent; }
-.dshgb-row--latest .dshgb-msgtick { background:var(--dsw-alias-brand-primary); }
-.dshgb-msgtext { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dsw-alias-label-primary); }
-.dshgb-row--latest .dshgb-msgtext { font-weight:600; }
+.dshgb-sha { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:#8be9fd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dshgb-time { font-size:11px; color:#7d86a8; }
+.dshgb-msg { display:flex; align-items:center; gap:9px; min-width:0; }
+.dshgb-msgtick { flex:none; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.16); }
+.dshgb-row--latest .dshgb-msgtick { background:#22d3ee; box-shadow:0 0 10px rgba(34,211,238,.95); }
+.dshgb-msgtext { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#dfe4ff; }
+.dshgb-row--latest .dshgb-msgtext { color:#ffffff; font-weight:600; }
 .dshgb-rowactions { display:flex; align-items:center; gap:4px; }
-.dshgb-rowactions .dshgb-btn { min-height:27px; padding:2px 9px; }
+
+/* workspaces */
+.dshgb-wsrow { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px; padding:10px; border-top:1px solid rgba(255,255,255,.06); border-radius:12px; transition:background-color .16s ease, transform .16s ease; }
+.dshgb-wsrow:first-child { border-top:0; }
+.dshgb-wsrow:hover { background:rgba(255,255,255,.05); transform:translateX(2px); }
+.dshgb-wsmain { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.dshgb-wsname { display:flex; align-items:center; gap:8px; color:#eef1ff; font-size:13px; font-weight:600; }
+.dshgb-badge { height:18px; padding:0 7px; border-radius:999px; border:1px solid rgba(251,191,36,.4); background:rgba(251,191,36,.12); color:#fbbf24; font-size:10.5px; line-height:16px; }
+.dshgb-wspath { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:#7d86a8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dshgb-meta { font-size:11px; color:#8b93b8; font-variant-numeric:tabular-nums; }
 
 /* fields */
-.dshgb-footrow { display:flex; align-items:center; gap:8px; padding-top:10px; border-top:1px solid var(--dsw-alias-border-l1); }
-.dshgb-field { flex:1 1 240px; min-width:150px; height:34px; box-sizing:border-box; border:1px solid var(--dsw-alias-border-l2); border-radius:8px; background:var(--dsw-alias-bg-base); color:var(--dsw-alias-label-primary); font:inherit; font-size:12.5px; padding:0 11px; transition:border-color .15s ease, box-shadow .15s ease; }
-.dshgb-field::placeholder { color:var(--dsw-alias-state-idle-primary); }
-.dshgb-field:hover:not(:disabled) { border-color:var(--dsw-alias-brand-primary); }
-.dshgb-field:focus { outline:none; border-color:var(--dsw-alias-brand-primary); box-shadow:0 0 0 2px var(--dsw-alias-bg-layer-2); }
+.dshgb-field {
+  display:block; width:100%; box-sizing:border-box; height:38px; border-radius:11px; padding:0 12px;
+  border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:#eef1ff;
+  font:inherit; font-size:12.5px; transition:border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+.dshgb-field::placeholder { color:#5f688a; }
+.dshgb-field:hover:not(:disabled) { border-color:rgba(124,92,255,.55); }
+.dshgb-field:focus { outline:none; border-color:#7c5cff; box-shadow:0 0 0 3px rgba(124,92,255,.22); background:rgba(255,255,255,.07); }
 .dshgb-field:disabled { opacity:.6; }
+.dshgb-footrow { display:flex; align-items:center; gap:8px; padding-top:12px; border-top:1px solid rgba(255,255,255,.06); }
+.dshgb-footrow .dshgb-field { flex:1 1 auto; width:auto; }
+.dshgb-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px 16px; }
+.dshgb-group { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.dshgb-grouplabel { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#6f789c; }
+.dshgb-helper { font-size:11px; color:#7d86a8; min-height:16px; }
+.dshgb-seg { display:inline-flex; border:1px solid rgba(255,255,255,.14); border-radius:11px; overflow:hidden; width:fit-content; background:rgba(255,255,255,.04); }
+.dshgb-segbtn { appearance:none; border:0; background:transparent; color:#9aa3c7; font:inherit; font-size:12px; padding:6px 13px; min-height:36px; cursor:pointer; transition:background-color .16s ease, color .16s ease; }
+.dshgb-segbtn:hover { color:#e6eaff; }
+.dshgb-segbtn--active { background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(79,140,255,.95)); color:#fff; box-shadow:0 4px 14px -6px rgba(124,92,255,.9); }
+.dshgb-segbtn:focus-visible { outline:2px solid #8be9fd; outline-offset:-2px; }
+.dshgb-info { display:flex; align-items:center; gap:9px; padding:10px 12px; border-radius:11px; background:rgba(124,92,255,.08); border:1px solid rgba(124,92,255,.22); font-size:11.5px; color:#b7bff0; }
 
-/* nested cards */
-.dshgb-subcard { display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--dsw-alias-border-l1); border-radius:12px; background:var(--dsw-alias-bg-base); animation:dshgb-rise .2s ease-out both; }
-.dshgb-subhead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.dshgb-subtitle2 { color:var(--dsw-alias-label-primary); font-weight:600; font-size:12.5px; }
-.dshgb-meta { font-size:11px; color:var(--dsw-alias-label-secondary); font-variant-numeric:tabular-nums; }
+/* nested sub-cards */
+.dshgb-subcard {
+  display:flex; flex-direction:column; gap:8px; padding:13px 15px; border-radius:14px;
+  background:rgba(8,10,20,.55); border:1px solid rgba(139,233,253,.18); backdrop-filter:blur(6px);
+  animation:dshgb-rise .2s ease-out both;
+}
+.dshgb-subhead { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.dshgb-subname { font-size:12.5px; font-weight:650; color:#eef1ff; }
 .dshgb-sublactions { margin-left:auto; display:flex; gap:4px; }
-.dshgb-file { display:flex; align-items:center; gap:10px; padding:5px 6px; border-radius:7px; font-size:12px; transition:background-color .15s ease; }
-.dshgb-file:hover { background:var(--dsw-alias-bg-layer-1); }
-.dshgb-filepath { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dsw-alias-label-primary); }
+.dshgb-file { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:9px; font-size:12px; transition:background-color .15s ease; }
+.dshgb-file:hover { background:rgba(255,255,255,.05); }
+.dshgb-filepath { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#dfe4ff; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; }
 .dshgb-filediff { flex:none; font-size:11px; font-variant-numeric:tabular-nums; }
-.dshgb-add { color:var(--dsw-alias-state-success-primary); }
-.dshgb-del { color:var(--dsw-alias-state-error-primary); }
-
-/* config */
-.dshgb-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px 16px; padding-top:2px; }
-.dshgb-group { display:flex; flex-direction:column; gap:5px; min-width:0; }
-.dshgb-grouplabel { font-size:11px; font-weight:500; color:var(--dsw-alias-label-secondary); }
-.dshgb-helper { font-size:11px; color:var(--dsw-alias-label-secondary); min-height:16px; }
-.dshgb-seg { display:inline-flex; border:1px solid var(--dsw-alias-border-l2); border-radius:8px; overflow:hidden; width:fit-content; }
-.dshgb-segbtn { appearance:none; border:0; background:transparent; color:var(--dsw-alias-label-secondary); font:inherit; font-size:12px; padding:5px 11px; min-height:32px; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
-.dshgb-segbtn:hover { color:var(--dsw-alias-label-primary); }
-.dshgb-segbtn--active { background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-primary); font-weight:500; }
-.dshgb-segbtn:focus-visible { outline:2px solid var(--dsw-alias-brand-primary); outline-offset:-2px; }
-.dshgb-info { display:flex; align-items:center; gap:8px; margin-top:2px; padding:9px 11px; border:1px solid var(--dsw-alias-border-l1); border-radius:9px; background:var(--dsw-alias-bg-base); font-size:11.5px; }
-.dshgb-cardfoot { font-size:11px; color:var(--dsw-alias-label-secondary); padding-top:2px; }
-
-/* workspace rows */
-.dshgb-wsrow { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding:9px 8px; border-top:1px solid var(--dsw-alias-border-l1); border-radius:10px; transition:background-color .16s ease, transform .16s ease; }
-.dshgb-wsrow:first-child { border-top:0; }
-.dshgb-wsrow:hover { background:var(--dsw-alias-bg-base); transform:translateX(2px); }
-.dshgb-wsmain { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.dshgb-wsname { display:flex; align-items:center; gap:8px; color:var(--dsw-alias-label-primary); font-size:13px; }
-.dshgb-badge { height:18px; padding:0 7px; border-radius:999px; border:1px solid var(--dsw-alias-border-l1); font-size:10.5px; line-height:16px; color:var(--dsw-alias-state-warn-primary); }
-.dshgb-wspath { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:var(--dsw-alias-label-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dshgb-add { color:#34d399; }
+.dshgb-del { color:#fb7185; }
 
 /* misc */
-.dshgb-hint { font-size:11px; color:var(--dsw-alias-label-secondary); }
-.dshgb-status { font-size:11px; animation:dshgb-rise .2s ease-out both; }
-.dshgb-status--ok { color:var(--dsw-alias-state-success-primary); }
-.dshgb-status--err { color:var(--dsw-alias-state-error-primary); }
-.dshgb-banner { display:flex; gap:10px; align-items:flex-start; padding:11px 13px; border:1px solid var(--dsw-alias-border-l1); border-radius:12px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-state-warn-primary); font-size:12px; animation:dshgb-rise .2s ease-out both; }
-.dshgb-banner--err { color:var(--dsw-alias-state-error-primary); }
-.dshgb-empty { padding:14px 8px; font-size:12px; color:var(--dsw-alias-label-secondary); }
-.dshgb-skeleton { height:11px; border-radius:6px; background:linear-gradient(90deg, var(--dsw-alias-bg-layer-2) 25%, var(--dsw-alias-bg-layer-1) 37%, var(--dsw-alias-bg-layer-2) 63%); background-size:200% 100%; animation:dshgb-shimmer 1.3s linear infinite; }
-.dshgb-skeletonrow { display:grid; grid-template-columns:32px 128px minmax(0,1fr); gap:12px; align-items:center; padding:12px 8px; border-top:1px solid var(--dsw-alias-border-l1); }
+.dshgb-hint { font-size:11px; color:#7d86a8; }
+.dshgb-status { font-size:11.5px; animation:dshgb-rise .2s ease-out both; }
+.dshgb-status--ok { color:#34d399; }
+.dshgb-status--err { color:#fb7185; }
+.dshgb-banner { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:14px; font-size:12px; color:#fbbf24; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.28); animation:dshgb-rise .2s ease-out both; }
+.dshgb-banner--err { color:#fb7185; background:rgba(251,113,133,.08); border-color:rgba(251,113,133,.3); }
+.dshgb-empty { padding:16px 10px; font-size:12px; color:#7d86a8; }
+.dshgb-skeleton { height:11px; border-radius:6px; background:linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.12) 37%, rgba(255,255,255,.05) 63%); background-size:200% 100%; animation:dshgb-shimmer 1.3s linear infinite; }
+.dshgb-skeletonrow { display:grid; grid-template-columns:30px 132px minmax(0,1fr); gap:14px; align-items:center; padding:13px 10px; border-top:1px solid rgba(255,255,255,.06); }
 .dshgb-skeletonrow:first-child { border-top:0; }
 
 @keyframes dshgb-rise { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 @keyframes dshgb-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
 @keyframes dshgb-pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+@keyframes dshgb-float { 0%,100% { transform:translate3d(0,0,0); } 50% { transform:translate3d(-14px,18px,0); } }
 @media (prefers-reduced-motion: reduce) {
   .dshgb-card, .dshgb-subcard, .dshgb-banner, .dshgb-status { animation:none !important; }
   .dshgb-skeleton { animation:none !important; }
+  .dshgb-orb { animation:none !important; }
   .dshgb-row, .dshgb-wsrow, .dshgb-btn, .dshgb-field, .dshgb-file, .dshgb-segbtn { transition:none !important; }
   .dshgb-row:hover, .dshgb-wsrow:hover, .dshgb-btn:hover:not(:disabled) { transform:none !important; }
   .dshgb-dot--pulse { animation:none !important; }
@@ -199,7 +279,7 @@ window.__ModuleLoader__.load({
 `
 
     function icon(kind) {
-      const common = { width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true }
+      const common = { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true }
       if (kind === 'cloud') {
         return h('svg', common, [
           h('path', { key: 'a', d: 'M5.2 11.8h5.9a2.5 2.5 0 0 0 .3-4.98 3.4 3.4 0 0 0-6.52-.62A2.35 2.35 0 0 0 5.2 11.8Z', stroke: 'currentColor', strokeWidth: 1.3, strokeLinejoin: 'round' }),
@@ -249,6 +329,14 @@ window.__ModuleLoader__.load({
       } catch {
         return ''
       }
+    }
+
+    // Auto-commit messages embed an ISO timestamp that duplicates the relative time.
+    function cleanMessage(message) {
+      return String(message ?? '')
+        .replace(/\s*@\s*\d{4}-\d{2}-\d{2}T[^\s]*/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
     }
 
     function createDispatcher(ctx) {
@@ -546,7 +634,7 @@ window.__ModuleLoader__.load({
             {
               key,
               type: 'button',
-              className: `dshgb-btn dshgb-btn--${options.variant ?? 'soft'}`,
+              className: `dshgb-btn dshgb-btn--${options.variant ?? 'soft'}${options.tiny ? ' dshgb-btn--tiny' : ''}`,
               disabled: options.disabled === true,
               title: options.title ?? label,
               'aria-label': options.ariaLabel ?? options.title ?? label,
@@ -590,10 +678,17 @@ window.__ModuleLoader__.load({
             [h('span', { key: 'dot', className: `dshgb-dot${tone === 'warn' ? ' dshgb-dot--warn' : tone === 'err' ? ' dshgb-dot--err' : ''}` }), text],
           )
 
+        const stat = (key, label, value, unit, meta) =>
+          h('div', { key, className: 'dshgb-stat' }, [
+            h('span', { key: 'label', className: 'dshgb-statlabel' }, label),
+            h('span', { key: 'value', className: 'dshgb-statvalue' }, [String(value), unit ? h('span', { key: 'u', className: 'dshgb-statunit' }, unit) : null]),
+            meta ? h('span', { key: 'meta', className: 'dshgb-statmeta' }, meta) : null,
+          ])
+
         const tokenPanel = tokenOpen
           ? h('div', { key: 'token', className: 'dshgb-subcard', role: 'group', 'aria-label': TEXT.tokenButton }, [
               h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subtitle2' }, TEXT.tokenLabel),
+                h('span', { key: 'title', className: 'dshgb-subname' }, TEXT.tokenLabel),
                 tokenLabel ? h('span', { key: 'state', className: 'dshgb-meta' }, tokenLabel) : null,
                 h('div', { key: 'actions', className: 'dshgb-sublactions' }, [
                   btn('close', TEXT.close, () => {
@@ -602,7 +697,7 @@ window.__ModuleLoader__.load({
                   }),
                 ]),
               ]),
-              h('div', { key: 'row', className: 'dshgb-row-inline', style: { display: 'flex', gap: '8px' } }, [
+              h('div', { key: 'row', style: { display: 'flex', gap: '8px' } }, [
                 h('input', {
                   key: 'input',
                   className: 'dshgb-field',
@@ -655,18 +750,14 @@ window.__ModuleLoader__.load({
                       h('span', { key: 'sha', className: 'dshgb-sha', title: item.sha ?? '' }, item.short ?? ''),
                       h('span', { key: 'time', className: 'dshgb-time' }, formatWhen(item.date)),
                     ]),
-                    h(
-                      'div',
-                      { key: 'msg', className: 'dshgb-msg' },
-                      [
-                        h('span', { key: 'tick', className: 'dshgb-msgtick' }),
-                        h('span', { key: 'text', className: 'dshgb-msgtext', title: item.message ?? '' }, item.message || TEXT.noMessage),
-                      ],
-                    ),
+                    h('div', { key: 'msg', className: 'dshgb-msg' }, [
+                      h('span', { key: 'tick', className: 'dshgb-msgtick' }),
+                      h('span', { key: 'text', className: 'dshgb-msgtext', title: item.message ?? '' }, cleanMessage(item.message) || TEXT.noMessage),
+                    ]),
                     h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
-                      btn('detail', TEXT.detail, () => openDetail(item.sha), { disabled: versionBusy }),
-                      btn('preview', TEXT.preview, () => openPreview(item.sha), { disabled: versionBusy }),
-                      btn('rollback', TEXT.rollback, () => rollbackTo(item.sha), { variant: 'primary', disabled: versionBusy }),
+                      btn('detail', TEXT.detail, () => openDetail(item.sha), { tiny: true, disabled: versionBusy }),
+                      btn('preview', TEXT.preview, () => openPreview(item.sha), { tiny: true, disabled: versionBusy }),
+                      btn('rollback', TEXT.rollback, () => rollbackTo(item.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
                     ]),
                   ],
                 ),
@@ -689,6 +780,7 @@ window.__ModuleLoader__.load({
                   h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
                     btn('toggle', entry.disabled ? TEXT.enable : TEXT.disable, () => switchWorkspace(entry), {
                       variant: entry.disabled ? 'secondary' : 'soft',
+                      tiny: true,
                       disabled: workspaceBusy,
                     }),
                   ]),
@@ -698,9 +790,9 @@ window.__ModuleLoader__.load({
         const detailBox = detail && Array.isArray(detail.files) && !detailHidden
           ? h('div', { key: 'detail', className: 'dshgb-subcard' }, [
               h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subtitle2' }, `${TEXT.detailTitle} · ${detail.short ?? ''}`),
+                h('span', { key: 'title', className: 'dshgb-subname' }, `${TEXT.detailTitle} · ${detail.short ?? ''}`),
                 h('span', { key: 'meta', className: 'dshgb-meta' }, `${detail.files.length} ${TEXT.files}`),
-                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setDetailHidden(true))]),
+                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setDetailHidden(true), { tiny: true })]),
               ]),
               detail.files.length === 0
                 ? h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)
@@ -712,7 +804,7 @@ window.__ModuleLoader__.load({
                         ' ',
                         h('span', { key: 'del', className: 'dshgb-del' }, `−${file.deletions}`),
                       ]),
-                      btn('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), { variant: 'primary', disabled: versionBusy }),
+                      btn('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                     ]),
                   )),
             ])
@@ -721,22 +813,22 @@ window.__ModuleLoader__.load({
         const previewBox = preview && !previewHidden
           ? h('div', { key: 'preview', className: 'dshgb-subcard' }, [
               h('div', { key: 'head', className: 'dshgb-subhead' }, [
-                h('span', { key: 'title', className: 'dshgb-subtitle2' }, `${TEXT.previewTitle} · ${preview.short ?? ''}`),
+                h('span', { key: 'title', className: 'dshgb-subname' }, `${TEXT.previewTitle} · ${preview.short ?? ''}`),
                 h(
                   'span',
                   { key: 'meta', className: 'dshgb-meta' },
                   `写入 ${preview.write?.length ?? 0} · 删除 ${preview.remove?.length ?? 0} · 不变 ${preview.unchanged ?? 0}`,
                 ),
                 h('div', { key: 'actions', className: 'dshgb-sublactions' }, [
-                  btn('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { variant: 'primary', disabled: versionBusy }),
-                  btn('cancel', TEXT.cancel, () => setPreviewHidden(true)),
+                  btn('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
+                  btn('cancel', TEXT.cancel, () => setPreviewHidden(true), { tiny: true }),
                 ]),
               ]),
               ...(preview.write ?? []).slice(0, 20).map((path) =>
                 h('div', { key: `w-${path}`, className: 'dshgb-file' }, [
                   h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
                   h('span', { key: 'diff', className: 'dshgb-filediff dshgb-add' }, '写入'),
-                  btn('only', TEXT.onlyThis, () => rollbackTo(preview.sha, [path]), { variant: 'primary', disabled: versionBusy }),
+                  btn('only', TEXT.onlyThis, () => rollbackTo(preview.sha, [path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                 ]),
               ),
               ...(preview.remove ?? []).slice(0, 20).map((path) =>
@@ -799,10 +891,13 @@ window.__ModuleLoader__.load({
 
         const configCard = h('section', { key: 'config', className: 'dshgb-card', 'aria-label': TEXT.config }, [
           h('div', { key: 'head', className: 'dshgb-cardhead' }, [
-            h('h3', { key: 'title', className: 'dshgb-cardtitle' }, [icon('sliders'), TEXT.config]),
+            h('div', { key: 'title', className: 'dshgb-cardtitle' }, [
+              h('span', { key: 'name', className: 'dshgb-cardname' }, [icon('sliders'), TEXT.config]),
+              h('span', { key: 'desc', className: 'dshgb-carddesc' }, TEXT.descConfig),
+            ]),
             h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
-              btn('save', TEXT.save, saveConfig, { variant: 'secondary' }),
-              btn('reload', TEXT.refresh, loadConfig),
+              btn('save', TEXT.save, saveConfig, { variant: 'primary' }),
+              btn('reload', TEXT.refresh, loadConfig, { variant: 'secondary' }),
             ]),
           ]),
           h('div', { key: 'grid', className: 'dshgb-grid' }, [
@@ -878,7 +973,7 @@ window.__ModuleLoader__.load({
             h('span', { key: 'dot', className: 'dshgb-dot dshgb-dot--pulse' }),
             h('span', { key: 'text' }, TEXT.autoNote(poll)),
           ]),
-          h('span', { key: 'hint', className: 'dshgb-cardfoot' }, TEXT.configHint),
+          h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.configHint),
         ])
 
         const statusNode = status
@@ -893,76 +988,90 @@ window.__ModuleLoader__.load({
             )
           : null
 
-        return h('div', { className: 'dshgb-view', 'aria-label': TEXT.viewTitle }, [
+        return h('div', { className: 'dshgb-wrap' }, [
           h('style', { key: 'style' }, STYLES),
-          h('div', { key: 'inner', className: 'dshgb-inner' }, [
-            h('header', { key: 'head', className: 'dshgb-head' }, [
-              h('div', { key: 'titlerow', className: 'dshgb-titlerow' }, [
-                h('span', { key: 'mark', className: 'dshgb-mark' }, icon('cloud')),
-                h('div', { key: 'titles', className: 'dshgb-titles' }, [
-                  h('h2', { key: 'title', className: 'dshgb-title' }, TEXT.viewTitle),
-                  h('p', { key: 'subtitle', className: 'dshgb-subtitle' }, TEXT.viewSubtitle),
+          h('div', { key: 'shell', className: 'dshgb-shell', 'aria-label': TEXT.viewTitle }, [
+            h('span', { key: 'orb-a', className: 'dshgb-orb dshgb-orb--a', 'aria-hidden': true }),
+            h('span', { key: 'orb-b', className: 'dshgb-orb dshgb-orb--b', 'aria-hidden': true }),
+            h('div', { key: 'inner', className: 'dshgb-inner' }, [
+              h('header', { key: 'head', className: 'dshgb-head' }, [
+                h('div', { key: 'titlerow', className: 'dshgb-titlerow' }, [
+                  h('span', { key: 'mark', className: 'dshgb-mark' }, icon('cloud')),
+                  h('div', { key: 'titles', className: 'dshgb-titles' }, [
+                    h('h2', { key: 'title', className: 'dshgb-title' }, TEXT.viewTitle),
+                    h('p', { key: 'subtitle', className: 'dshgb-subtitle' }, TEXT.viewSubtitle),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-headactions' }, [
+                    btn(
+                      'token',
+                      tokenOpen ? TEXT.close : TEXT.tokenButton,
+                      () => {
+                        setTokenTouched(true)
+                        setTokenOpen((open) => !open)
+                      },
+                      { variant: tokenState?.present && !tokenOpen ? 'secondary' : 'primary' },
+                    ),
+                  ]),
                 ]),
-                h('div', { key: 'actions', className: 'dshgb-headactions' }, [
-                  btn(
-                    'token',
-                    tokenOpen ? TEXT.close : TEXT.tokenButton,
-                    () => {
-                      setTokenTouched(true)
-                      setTokenOpen((open) => !open)
-                    },
-                    { variant: tokenState?.present && !tokenOpen ? 'secondary' : 'primary' },
-                  ),
+                h('div', { key: 'chips', className: 'dshgb-chips' }, [
+                  chip('auto', TEXT.chipAuto(poll), 'ok'),
+                  chip('repo', repoChip),
+                  chip('branch', TEXT.chipBranch(configValues.branch ?? 'main')),
+                  chip('layout', TEXT.chipLayout(configValues.layout ?? 'workspaces')),
+                  tokenState?.present
+                    ? chip('token', `token · ${tokenLabel}`, tokenState.daysLeft !== null && tokenState.daysLeft <= 14 ? 'warn' : 'ok')
+                    : tokenState === null || tokenState === undefined
+                      ? null
+                      : chip('token', `token · ${TEXT.tokenMissing}`, 'err'),
+                ]),
+                h('div', { key: 'stats', className: 'dshgb-stats' }, [
+                  stat('versions', TEXT.statVersions, versions.length, TEXT.statUnitVersions, formatWhen(versions[0]?.date) ? `最近 ${formatWhen(versions[0]?.date)}` : '等待首次提交'),
+                  stat('workspaces', TEXT.statWorkspaces, workspaces.length, TEXT.statUnitWorkspaces, '可在下方停用'),
+                  stat('poll', TEXT.statPoll, poll, TEXT.statUnitPoll, '自动扫描周期'),
+                  stat('token', TEXT.statToken, tokenState?.present ? '正常' : tokenState === undefined ? '—' : '缺失', '', tokenLabel || '尚未配置'),
                 ]),
               ]),
-              h('div', { key: 'chips', className: 'dshgb-chips' }, [
-                chip('auto', TEXT.chipAuto(poll), 'ok'),
-                chip('repo', repoChip),
-                chip('branch', TEXT.chipBranch(configValues.branch ?? 'main')),
-                chip('layout', TEXT.chipLayout(configValues.layout ?? 'workspaces')),
-                tokenState?.present
-                  ? chip('token', `token · ${tokenLabel}`, tokenState.daysLeft !== null && tokenState.daysLeft <= 14 ? 'warn' : 'ok')
-                  : tokenState === null || tokenState === undefined
-                    ? null
-                    : chip('token', `token · ${TEXT.tokenMissing}`, 'err'),
+              bannerMessages.length > 0
+                ? h(
+                    'div',
+                    { key: 'banner', className: `dshgb-banner${bannerLevel === 'err' ? ' dshgb-banner--err' : ''}` },
+                    [h('span', { key: 'dot', className: `dshgb-dot${bannerLevel === 'err' ? ' dshgb-dot--err' : ' dshgb-dot--warn'} dshgb-dot--pulse` }), bannerMessages.join(' ')],
+                  )
+                : null,
+              tokenPanel,
+              h('section', { key: 'versions', className: 'dshgb-card', 'aria-label': TEXT.versions }, [
+                h('div', { key: 'head', className: 'dshgb-cardhead' }, [
+                  h('div', { key: 'title', className: 'dshgb-cardtitle' }, [
+                    h('span', { key: 'name', className: 'dshgb-cardname' }, [icon('history'), TEXT.versions, h('span', { key: 'count', className: 'dshgb-count' }, `${versions.length}`)]),
+                    h('span', { key: 'desc', className: 'dshgb-carddesc' }, TEXT.descVersions),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
+                    btn('undo', TEXT.undo, undoRollback, { variant: 'secondary', disabled: versionBusy }),
+                    btn('refresh', versionBusy ? TEXT.loading : TEXT.refresh, refreshVersions, { variant: 'secondary', disabled: versionBusy }),
+                  ]),
+                ]),
+                h('div', { key: 'rows', className: 'dshgb-rows' }, versionRows),
+                detailBox,
+                previewBox,
+                versionFooter,
+                h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.hintRollback),
               ]),
+              h('section', { key: 'workspaces', className: 'dshgb-card', 'aria-label': TEXT.workspaces }, [
+                h('div', { key: 'head', className: 'dshgb-cardhead' }, [
+                  h('div', { key: 'title', className: 'dshgb-cardtitle' }, [
+                    h('span', { key: 'name', className: 'dshgb-cardname' }, [icon('folder'), TEXT.workspaces, h('span', { key: 'count', className: 'dshgb-count' }, `${workspaces.length}`)]),
+                    h('span', { key: 'desc', className: 'dshgb-carddesc' }, TEXT.descWorkspaces),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
+                    btn('refresh', workspaceBusy ? TEXT.loading : TEXT.refresh, refreshWorkspaces, { variant: 'secondary', disabled: workspaceBusy }),
+                  ]),
+                ]),
+                h('div', { key: 'rows', className: 'dshgb-rows' }, workspaceRows),
+                workspaceFooter,
+              ]),
+              configCard,
+              statusNode,
             ]),
-            bannerMessages.length > 0
-              ? h(
-                  'div',
-                  { key: 'banner', className: `dshgb-banner${bannerLevel === 'err' ? ' dshgb-banner--err' : ''}` },
-                  [h('span', { key: 'dot', className: `dshgb-dot${bannerLevel === 'err' ? ' dshgb-dot--err' : ' dshgb-dot--warn'} dshgb-dot--pulse` }), bannerMessages.join(' ')],
-                )
-              : null,
-            tokenPanel,
-            h('section', { key: 'versions', className: 'dshgb-card', 'aria-label': TEXT.versions }, [
-              h('div', { key: 'head', className: 'dshgb-cardhead' }, [
-                h('h3', { key: 'title', className: 'dshgb-cardtitle' }, [icon('history'), TEXT.versions]),
-                h('span', { key: 'count', className: 'dshgb-count' }, `${versions.length}`),
-                h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
-                  btn('undo', TEXT.undo, undoRollback, { disabled: versionBusy }),
-                  btn('refresh', versionBusy ? TEXT.loading : TEXT.refresh, refreshVersions, { variant: 'secondary', disabled: versionBusy }),
-                ]),
-              ]),
-              h('div', { key: 'rows', className: 'dshgb-rows' }, versionRows),
-              detailBox,
-              previewBox,
-              versionFooter,
-              h('span', { key: 'hint', className: 'dshgb-cardfoot' }, TEXT.hintRollback),
-            ]),
-            h('section', { key: 'workspaces', className: 'dshgb-card', 'aria-label': TEXT.workspaces }, [
-              h('div', { key: 'head', className: 'dshgb-cardhead' }, [
-                h('h3', { key: 'title', className: 'dshgb-cardtitle' }, [icon('folder'), TEXT.workspaces]),
-                h('span', { key: 'count', className: 'dshgb-count' }, `${workspaces.length}`),
-                h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
-                  btn('refresh', workspaceBusy ? TEXT.loading : TEXT.refresh, refreshWorkspaces, { variant: 'secondary', disabled: workspaceBusy }),
-                ]),
-              ]),
-              h('div', { key: 'rows', className: 'dshgb-rows' }, workspaceRows),
-              workspaceFooter,
-            ]),
-            configCard,
-            statusNode,
           ]),
         ])
       }
