@@ -1,0 +1,43 @@
+{
+  "name": "@local/dsh-git-backup",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "Bigdusk",
+  "description": "Back up a workspace .dsh folder to GitHub automatically, with preview/selective rollback, workspace management and a disaster-recovery script.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bigdusk/dsh-git-backup.git"
+  },
+  "keywords": ["deepseek-harness", "dsh-plugin", "backup", "rollback", "github"],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "recover.mjs",
+    "scripts",
+    "lib",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "LICENSE",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+    }
+  }
+}

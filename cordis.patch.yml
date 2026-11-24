@@ -1,0 +1,50 @@
+# Bundle patch: inserts the GitHub .dsh backup plugin as one Host row.
+# Edit the `config` values here (or in the profile's cordis.patch.yml) to change
+# the repository, branch, or sync cadence.
+- insert:
+    - id: dsh-git-backup
+      name: '@local/dsh-git-backup'
+      config:
+        # '' means: resolve the owner from the token, then use repoName below.
+        # Set 'owner/repo' to target an existing repository instead.
+        repo: ''
+        repoName: dsh-backup
+        private: true
+        branch: main
+        # Folder inside each workspace that is backed up.
+        subdir: .dsh
+        # Watch for changes and push automatically.
+        autoSync: true
+        pollSeconds: 15
+        debounceSeconds: 4
+        # 'workspaces' puts each workspace under workspaces/<folder-name>/;
+        # 'root' mirrors the .dsh folder at the repository root.
+        layout: workspaces
+        # Non-empty overrides layout and is used verbatim as the remote prefix.
+        remoteRoot: ''
+        # Extra absolute workspace directories to watch.
+        roots: []
+        # Empty include means: everything that is not excluded.
+        include: []
+        exclude:
+          - .git/**
+          - node_modules/**
+          - '**/node_modules/**'
+          - sessions/**
+          - storages/**
+          - '**/*.zstd'
+          - '**/*.tmp'
+          - '**/~$*'
+          - '**/.DS_Store'
+          - '**/Thumbs.db'
+          - '.credentials*'
+          - '**/.credentials*'
+          - '.env'
+          - '**/.env'
+        # Per-file limit for the GitHub blob API.
+        maxFileBytes: 26214400
+        tokenEnv: GITHUB_TOKEN
+        envFile: ''
+        apiBase: https://api.github.com
+        commitAuthorName: dsh-backup
+        commitAuthorEmail: dsh-backup@users.noreply.github.com

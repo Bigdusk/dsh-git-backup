@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "GitHub .dsh 备份",
+    "description": "检测到工作区 .dsh 文件夹变化时自动备份到 GitHub 仓库，并支持一键拉取回当前工作区。",
+    "detail": "docs/DETAIL.md"
+  }
+}
