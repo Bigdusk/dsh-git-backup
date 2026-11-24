@@ -32,6 +32,7 @@ export function apply(ctx, config) {
   const logError = (message) => write('error', message)
 
   const engine = new BackupEngine({ config, home: process.env.DSH_HOME ?? '', log })
+  engine.applyPrefs()
   const pendingTimers = new Map()
   let tokenSeen = false
 
@@ -102,18 +103,40 @@ export function apply(ctx, config) {
     pendingTimers.set(root, timer)
   }
 
+  let failureStreak = 0
+  let lastNotifyAt = 0
+
+  /** Surface a repeated auto-sync failure into the current session (best effort). */
+  function notifyFailure(message) {
+    failureStreak += 1
+    if (failureStreak < 2 || Date.now() - lastNotifyAt < 600_000) return
+    lastNotifyAt = Date.now()
+    try {
+      const agents = get('agents')
+      const list = typeof agents?.list === 'function' ? agents.list() : []
+      const agent = list[0]
+      if (agent && typeof agent.inject === 'function') {
+        agent.inject(`⚠ 自动备份连续失败：${message}`)
+      }
+    } catch {
+      /* notification is best effort */
+    }
+  }
+
   async function runAutoPush(root) {
     if (!engine.cfg.autoSync) return
     const state = engine.rootState(root)
     if (state.busy) return
     try {
-      const result = await engine.push(root, {})
+      const result = await engine.push(root, { source: 'auto', kind: 'backup' })
+      failureStreak = 0
       if (result.upToDate) log(`自动备份：${root} 与远端一致，无需提交`)
       else log(`自动备份完成：${result.commitUrl}`)
     } catch (error) {
       const message = error?.message ?? String(error)
       state.lastError = message
       logError(`自动备份失败：${message}`)
+      notifyFailure(`${root}：${message}`)
     }
   }
 

@@ -84,7 +84,19 @@ token 默认从 `%USERPROFILE%\.dsh\.env` 读 `GITHUB_TOKEN`，可用 `--token-e
 
 - **GitHub token**：视图右上角常驻「设置 token」按钮（未配置 token 时表单会自动展开）。点开是一个卡片：密码输入框 + 「保存 token」+ 当前状态（未配置 / 已配置 / 还有 N 天过期）+ 「保存到 `%USERPROFILE%\.dsh\.env`」说明。保存时把 token 通过 `/dsh-backup token <token>` 交给 Host，Host 先向 GitHub 校验账号再写入 `.env`，随后自动开始备份。该命令以 `recordInput: false` 注册，所以 token **不会**进入会话日志、对话流或命令记录的界面文本；保存成功后收起面板并清空输入框。
 - **仓库 / 分支 / 轮询 / 远端布局**：在「配置」区里改，保存后写入 profile 配置并让插件行重启一次生效。
-- **自动同步开关**：「配置」卡底部的拨杆，默认开启；关闭后写入 profile 配置（插件行重启一次），并提示需要手动提交。开启/关闭状态来自 `/dsh-backup status` 的 autoSync 字段。
+- **自动同步开关**：「配置」卡底部的拨杆，默认开启；切换**立即生效、不重启**，偏好写入 `$DSH_HOME/dsh-git-backup/prefs.json`，插件启动时读取。关闭后页面顶部提示需要手动提交。
+
+### 冲突检测与串行锁
+
+- 每次成功同步后记录远端 HEAD。下一次自动提交前若发现远端 HEAD 已变化（另一台机器或 GitHub 网页上有人写入），**自动提交会中止并报错**，避免静默覆盖对方工作；确认要覆盖时手动点「立即提交」即可（工具可传 `allowOverwrite`）。
+- `push` / `pull` / `rollback` 对同一工作区共用一把串行锁，恢复过程中不会再插入自动提交，杜绝「半回滚」的中间态提交；不同工作区仍可并行。
+
+### 内容改动、体检与 token 管理
+
+- **内容改动**：版本行「改动」与详情里的单文件「改动」执行 `/dsh-backup diff <ref> [路径]`，返回 unified patch（绿加红删、`@@` 青色），界面里直接在卡片中渲染。
+- **仓库体检**：配置卡「体检」→ `/dsh-backup health`，给出仓库大小、远端/本地文件数、逐文件一致性（内容不一致 / 本地未备份 / 远端多出），只读。
+- **移除 token**：配置卡「移除 token」→ `/dsh-backup token clear`，从 `$DSH_HOME/.env` 删除该行并清理进程环境变量。
+- **搜索**：版本卡按提交说明或 sha 过滤；详情/预览按文件路径过滤。
 
 界面文案固定为中文：即使应用语言是英文，视图也显示中文（`locale/en.json` 的插件标题与描述同样是中文，保证任何语言下 Plugins 列表里也是中文）。如需恢复按语言切换，改 `client.js` 顶部的 `TEXT` 表并读 `ctx.get('locale').getLocale().active`。
 
@@ -108,8 +120,10 @@ token 默认从 `%USERPROFILE%\.dsh\.env` 读 `GITHUB_TOKEN`，可用 `--token-e
 | `dsh_backup_history` | 列出某个工作区 `.dsh` 的备份版本：序号、短提交号、时间、说明。`limit` 默认 10；传 `version` 改为列出该版本改动的文件与增删行数。 |
 | `dsh_backup_rollback` | 回滚到某个版本：`version` 接受序号、提交号（可缩写）、分支或标签；`paths` 只恢复指定文件/目录，`undo: true` 撤销上一次回滚，`local: true` 只改本地，`dryRun: true` 只预览。 |
 | `dsh_backup_workspaces` | 工作区管理：`action` 为 list / add / remove / enable / disable，`path` 为工作区绝对路径。 |
+| `dsh_backup_health` | 体检备份仓库：大小、远端/本地文件数、逐文件一致性（只读）。 |
+| `dsh_backup_diff` | 查看某版本的内容改动（unified patch），可用 `path` 过滤。 |
 
-斜杠命令：`/dsh-backup status | push | pull | auto [on|off] | token <token> | history [n] | detail <ref> | preview <ref> | rollback <ref> [--local] [--only <路径>] | undo | workspaces | workspace <add|remove|enable|disable> <路径> | config [set <键> <值>]`，不经模型直接执行，控制条按钮和「备份」页调用的就是它。
+斜杠命令：`/dsh-backup status | push | pull | history [n] | detail <ref> | diff <ref> [路径] | preview <ref> | rollback <ref> [--local] [--only <路径>] | undo | workspaces | workspace <add|remove|enable|disable> <路径> | auto [on|off] | token <token|clear> | health | config [set <键> <值>]`，不经模型直接执行，控制条按钮和「快照」页调用的就是它。
 
 ## 版本回滚
 

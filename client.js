@@ -91,6 +91,21 @@ window.__ModuleLoader__.load({
       sent: '已发送，结果显示在对话里',
       loading: '加载中…',
       identical: '与当前内容一致，无需回滚。',
+      autoSyncInstant: '立即生效，无需重启',
+      searchVersions: '搜索提交说明或 sha',
+      searchFiles: '筛选文件路径',
+      badgeAuto: '自动',
+      badgeManual: '手动',
+      badgeRollback: '回滚',
+      badgeProtect: '保护',
+      diffTitle: '内容改动',
+      diffBtn: '改动',
+      healthBtn: '体检',
+      healthTitle: '仓库体检',
+      removeToken: '移除 token',
+      noDiff: '这个版本没有文本补丁（可能是二进制文件）。',
+      healthOk: '本地与远端完全一致。',
+      healthSize: (kb) => (kb === null ? '大小未知' : `${kb} KB`),
     }
 
     // Web3-style dark glass dashboard: self-contained palette so the panel keeps
@@ -222,6 +237,18 @@ window.__ModuleLoader__.load({
 .dshgb-badge { height:18px; padding:0 7px; border-radius:999px; border:1px solid rgba(251,191,36,.4); background:rgba(251,191,36,.12); color:#fbbf24; font-size:10.5px; line-height:16px; }
 .dshgb-wspath { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; color:#7d86a8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dshgb-meta { font-size:11px; color:#8b93b8; font-variant-numeric:tabular-nums; }
+.dshgb-kind { flex:none; height:18px; padding:0 7px; border-radius:999px; border:1px solid rgba(255,255,255,.14); font-size:10.5px; line-height:16px; color:#9aa3c7; }
+.dshgb-kind--ok { color:#34d399; border-color:rgba(52,211,153,.35); background:rgba(52,211,153,.08); }
+.dshgb-kind--warn { color:#fbbf24; border-color:rgba(251,191,36,.35); background:rgba(251,191,36,.08); }
+.dshgb-kind--muted { color:#8b93b8; background:rgba(255,255,255,.04); }
+.dshgb-search { display:flex; gap:8px; align-items:center; padding:2px 0; }
+.dshgb-search .dshgb-field { flex:1 1 auto; width:auto; height:32px; }
+.dshgb-diff { display:flex; flex-direction:column; gap:1px; padding:8px 10px; border-radius:10px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08); overflow:auto; max-height:300px; }
+.dshgb-diffline { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11.5px; white-space:pre; color:#c6cdf0; }
+.dshgb-diffline--add { color:#34d399; }
+.dshgb-diffline--del { color:#fb7185; }
+.dshgb-diffline--hunk { color:#8be9fd; }
+.dshgb-healthrow { display:flex; gap:12px; flex-wrap:wrap; }
 
 /* fields */
 .dshgb-field {
@@ -364,6 +391,15 @@ window.__ModuleLoader__.load({
         .trim()
     }
 
+    /** Classify a commit message into the badge shown next to the row. */
+    function commitKind(message) {
+      const text = String(message ?? '')
+      if (/^rollback\(/.test(text)) return { key: 'rollback', label: TEXT.badgeRollback, tone: 'warn' }
+      if (/^autosave-before-restore/.test(text)) return { key: 'protect', label: TEXT.badgeProtect, tone: 'muted' }
+      if (/^manual\(/.test(text)) return { key: 'manual', label: TEXT.badgeManual, tone: 'ok' }
+      return { key: 'auto', label: TEXT.badgeAuto, tone: 'ok' }
+    }
+
     function createDispatcher(ctx) {
       return (sessionId) => (line) => {
         if (!sessionId) return Promise.reject(new Error(TEXT.noSession))
@@ -386,6 +422,8 @@ window.__ModuleLoader__.load({
         status: null,
         detail: null,
         preview: null,
+        diff: null,
+        health: null,
         config: null,
       })
       React.useEffect(() => {
@@ -407,6 +445,10 @@ window.__ModuleLoader__.load({
             setPayloads((current) => ({ ...current, detail: payload }))
           } else if (payload.kind === 'preview') {
             setPayloads((current) => ({ ...current, preview: payload }))
+          } else if (payload.kind === 'diff') {
+            setPayloads((current) => ({ ...current, diff: payload }))
+          } else if (payload.kind === 'health') {
+            setPayloads((current) => ({ ...current, health: payload }))
           } else if (payload.kind === 'config') {
             setPayloads((current) => ({ ...current, config: payload.values }))
           }
@@ -460,6 +502,8 @@ window.__ModuleLoader__.load({
         const statusInfo = payloads.status ?? null
         const detail = payloads.detail ?? null
         const preview = payloads.preview ?? null
+        const diff = payloads.diff ?? null
+        const health = payloads.health ?? null
         const config = payloads.config ?? null
 
         const [versionsLoaded, setVersionsLoaded] = React.useState(false)
@@ -474,9 +518,13 @@ window.__ModuleLoader__.load({
         const [tokenOpen, setTokenOpen] = React.useState(false)
         const [tokenTouched, setTokenTouched] = React.useState(false)
         const [autoOptimistic, setAutoOptimistic] = React.useState(null)
+        const [versionQuery, setVersionQuery] = React.useState('')
+        const [fileQuery, setFileQuery] = React.useState('')
         const [status, setStatus] = React.useState(null)
         const [detailHidden, setDetailHidden] = React.useState(false)
         const [previewHidden, setPreviewHidden] = React.useState(false)
+        const [diffHidden, setDiffHidden] = React.useState(false)
+        const [healthHidden, setHealthHidden] = React.useState(false)
 
         const dispatch = dispatchFor(props?.sessionId)
         const hasSession = Boolean(props?.sessionId)
@@ -586,11 +634,31 @@ window.__ModuleLoader__.load({
           })
         }
 
+        const openDiff = (sha, filePath) => {
+          if (!hasSession) return
+          setDiffHidden(false)
+          run(TEXT.diffTitle, `/dsh-backup diff ${sha}${filePath ? ` ${filePath}` : ''}`)
+        }
+
+        const runHealth = () => {
+          if (!hasSession) return
+          setHealthHidden(false)
+          run(TEXT.healthBtn, '/dsh-backup health')
+        }
+
+        const removeToken = () => {
+          if (!hasSession) return
+          run(TEXT.removeToken, '/dsh-backup token clear', {
+            okText: 'token 已移除',
+            done: () => refreshStatus(),
+          })
+        }
+
         const toggleAutoSync = () => {
           if (!hasSession) return
           const next = !autoOn
           setAutoOptimistic(next)
-          dispatch(`/dsh-backup config set autoSync ${next ? 'true' : 'false'}`)
+          dispatch(`/dsh-backup auto ${next ? 'on' : 'off'}`)
             .then(() => {
               setStatus({ kind: 'ok', text: TEXT.autoSyncSaved })
               return dispatch('/dsh-backup status').catch(() => {})
@@ -801,17 +869,20 @@ window.__ModuleLoader__.load({
             ]),
           )
 
+        const versionFilter = versionQuery.trim().toLowerCase()
+        const visibleVersions = versionFilter
+          ? versions.filter((item) => `${item.message ?? ''} ${item.sha ?? ''}`.toLowerCase().includes(versionFilter))
+          : versions
         const versionRows = !versionsLoaded && versions.length === 0
           ? skeletonRows(3)
-          : versions.length === 0
-            ? [h('div', { key: 'empty', className: 'dshgb-empty' }, TEXT.noVersions)]
-            : versions.map((item, index) =>
-                h(
+          : visibleVersions.length === 0
+            ? [h('div', { key: 'empty', className: 'dshgb-empty' }, versionFilter ? '没有匹配的版本。' : TEXT.noVersions)]
+            : visibleVersions.map((item, index) => {
+                const kind = commitKind(item.message)
+                const latest = (versions[0]?.sha ?? versions[0]?.n) === (item.sha ?? item.n)
+                return h(
                   'div',
-                  {
-                    key: item.sha ?? item.n,
-                    className: `dshgb-row${index === 0 ? ' dshgb-row--latest' : ''}`,
-                  },
+                  { key: item.sha ?? item.n, className: `dshgb-row${latest ? ' dshgb-row--latest' : ''}` },
                   [
                     h('span', { key: 'idx', className: 'dshgb-idx' }, `${item.n ?? index + 1}`),
                     h('div', { key: 'meta', className: 'dshgb-metacol' }, [
@@ -820,16 +891,18 @@ window.__ModuleLoader__.load({
                     ]),
                     h('div', { key: 'msg', className: 'dshgb-msg' }, [
                       h('span', { key: 'tick', className: 'dshgb-msgtick' }),
+                      h('span', { key: 'kind', className: `dshgb-kind dshgb-kind--${kind.tone}` }, kind.label),
                       h('span', { key: 'text', className: 'dshgb-msgtext', title: item.message ?? '' }, cleanMessage(item.message) || TEXT.noMessage),
                     ]),
                     h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
+                      btn('diff', TEXT.diffBtn, () => openDiff(item.sha), { tiny: true, disabled: versionBusy }),
                       btn('detail', TEXT.detail, () => openDetail(item.sha), { tiny: true, disabled: versionBusy }),
                       btn('preview', TEXT.preview, () => openPreview(item.sha), { tiny: true, disabled: versionBusy }),
                       btn('rollback', TEXT.rollback, () => rollbackTo(item.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
                     ]),
                   ],
-                ),
-              )
+                )
+              })
 
         const workspaceRows = !workspacesLoaded && workspaces.length === 0
           ? skeletonRows(2)
@@ -855,6 +928,8 @@ window.__ModuleLoader__.load({
                 ]),
               )
 
+        const fileFilter = fileQuery.trim().toLowerCase()
+        const detailFiles = (detail?.files ?? []).filter((file) => !fileFilter || file.path.toLowerCase().includes(fileFilter))
         const detailBox = detail && Array.isArray(detail.files) && !detailHidden
           ? h('div', { key: 'detail', className: 'dshgb-subcard' }, [
               h('div', { key: 'head', className: 'dshgb-subhead' }, [
@@ -862,9 +937,20 @@ window.__ModuleLoader__.load({
                 h('span', { key: 'meta', className: 'dshgb-meta' }, `${detail.files.length} ${TEXT.files}`),
                 h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setDetailHidden(true), { tiny: true })]),
               ]),
-              detail.files.length === 0
-                ? h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)
-                : h('div', { key: 'files' }, detail.files.slice(0, 40).map((file) =>
+              h('div', { key: 'search', className: 'dshgb-search' }, [
+                h('input', {
+                  key: 'q',
+                  className: 'dshgb-field',
+                  type: 'search',
+                  value: fileQuery,
+                  placeholder: TEXT.searchFiles,
+                  spellCheck: false,
+                  onChange: (event) => setFileQuery(event.target.value),
+                }),
+              ]),
+              detailFiles.length === 0
+                ? h('div', { key: 'empty', className: 'dshgb-hint' }, fileFilter ? '没有匹配的文件。' : TEXT.noFiles)
+                : h('div', { key: 'files' }, detailFiles.slice(0, 40).map((file) =>
                     h('div', { key: file.path, className: 'dshgb-file' }, [
                       h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
                       h('span', { key: 'diff', className: 'dshgb-filediff' }, [
@@ -872,9 +958,78 @@ window.__ModuleLoader__.load({
                         ' ',
                         h('span', { key: 'del', className: 'dshgb-del' }, `−${file.deletions}`),
                       ]),
+                      btn('show-diff', TEXT.diffBtn, () => openDiff(detail.sha, file.path), { tiny: true, disabled: versionBusy }),
                       btn('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                     ]),
                   )),
+            ])
+          : null
+
+        const diffBox = diff && Array.isArray(diff.files) && !diffHidden
+          ? h('div', { key: 'diff', className: 'dshgb-subcard' }, [
+              h('div', { key: 'head', className: 'dshgb-subhead' }, [
+                h('span', { key: 'title', className: 'dshgb-subname' }, `${TEXT.diffTitle} · ${diff.short ?? ''}`),
+                h('span', { key: 'meta', className: 'dshgb-meta' }, `${diff.files.length} ${TEXT.files}`),
+                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setDiffHidden(true), { tiny: true })]),
+              ]),
+              diff.files.length === 0
+                ? h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)
+                : h(
+                    'div',
+                    { key: 'bodies' },
+                    diff.files.slice(0, 6).flatMap((file) => [
+                      h('div', { key: `h-${file.path}`, className: 'dshgb-file' }, [
+                        h('span', { key: 'path', className: 'dshgb-filepath', title: file.path }, file.path),
+                        h('span', { key: 'meta', className: 'dshgb-meta' }, `+${file.additions} −${file.deletions}`),
+                      ]),
+                      file.patch
+                        ? h(
+                            'div',
+                            { key: `p-${file.path}`, className: 'dshgb-diff' },
+                            String(file.patch)
+                              .split('\n')
+                              .slice(0, 200)
+                              .map((line, lineIndex) =>
+                                h(
+                                  'span',
+                                  {
+                                    key: lineIndex,
+                                    className: `dshgb-diffline${
+                                      line.startsWith('+')
+                                        ? ' dshgb-diffline--add'
+                                        : line.startsWith('-')
+                                          ? ' dshgb-diffline--del'
+                                          : line.startsWith('@@')
+                                            ? ' dshgb-diffline--hunk'
+                                            : ''
+                                    }`,
+                                  },
+                                  line || ' ',
+                                ),
+                              ),
+                          )
+                        : h('div', { key: `p-${file.path}`, className: 'dshgb-hint' }, TEXT.noDiff),
+                    ]),
+                  ),
+            ])
+          : null
+
+        const healthBox = health && !healthHidden
+          ? h('div', { key: 'health', className: 'dshgb-subcard' }, [
+              h('div', { key: 'head', className: 'dshgb-subhead' }, [
+                h('span', { key: 'title', className: 'dshgb-subname' }, TEXT.healthTitle),
+                h('span', { key: 'meta', className: 'dshgb-meta' }, `${health.repository} · ${TEXT.healthSize(health.repoSizeKb)}`),
+                h('div', { key: 'actions', className: 'dshgb-sublactions' }, [btn('close', TEXT.close, () => setHealthHidden(true), { tiny: true })]),
+              ]),
+              h('div', { key: 'row', className: 'dshgb-healthrow' }, [
+                h('span', { key: 'counts', className: 'dshgb-meta' }, `远端 ${health.remoteCount} · 本地 ${health.localCount} · 一致 ${health.same}`),
+                (health.mismatch ?? []).length ? h('span', { key: 'm', className: 'dshgb-meta dshgb-del' }, `内容不一致 ${health.mismatch.length}`) : null,
+                (health.missing ?? []).length ? h('span', { key: 'x', className: 'dshgb-meta dshgb-add' }, `本地未备份 ${health.missing.length}`) : null,
+                (health.extra ?? []).length ? h('span', { key: 'e', className: 'dshgb-meta' }, `远端多出 ${health.extra.length}`) : null,
+              ]),
+              (health.mismatch ?? []).length === 0 && (health.missing ?? []).length === 0 && (health.extra ?? []).length === 0
+                ? h('div', { key: 'ok', className: 'dshgb-hint' }, TEXT.healthOk)
+                : h('div', { key: 'paths', className: 'dshgb-hint' }, [...(health.mismatch ?? []), ...(health.missing ?? [])].slice(0, 10).join('、')),
             ])
           : null
 
@@ -964,8 +1119,10 @@ window.__ModuleLoader__.load({
               h('span', { key: 'desc', className: 'dshgb-carddesc' }, TEXT.descConfig),
             ]),
             h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
+              btn('health', TEXT.healthBtn, runHealth, { variant: 'secondary' }),
               btn('save', TEXT.save, saveConfig, { variant: 'primary' }),
               btn('reload', TEXT.refresh, loadConfig, { variant: 'secondary' }),
+              btn('remove-token', TEXT.removeToken, removeToken, { variant: 'secondary' }),
             ]),
           ]),
           h('div', { key: 'grid', className: 'dshgb-grid' }, [
@@ -1136,9 +1293,23 @@ window.__ModuleLoader__.load({
                     btn('refresh', versionBusy ? TEXT.loading : TEXT.refresh, refreshVersions, { variant: 'secondary', disabled: versionBusy }),
                   ]),
                 ]),
+                h('div', { key: 'search', className: 'dshgb-search' }, [
+                  h('input', {
+                    key: 'q',
+                    className: 'dshgb-field',
+                    type: 'search',
+                    value: versionQuery,
+                    placeholder: TEXT.searchVersions,
+                    spellCheck: false,
+                    'aria-label': TEXT.searchVersions,
+                    onChange: (event) => setVersionQuery(event.target.value),
+                  }),
+                ]),
                 h('div', { key: 'rows', className: 'dshgb-rows' }, versionRows),
                 detailBox,
                 previewBox,
+                diffBox,
+                healthBox,
                 versionFooter,
                 h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.hintRollback),
               ]),
