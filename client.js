@@ -9,6 +9,16 @@ window.__ModuleLoader__.load({
       viewLabel: NAME,
       viewTitle: '快照与版本',
       viewSubtitle: 'GitHub 自动备份 · 版本回滚 · 工作区 · 配置',
+      pushNow: '立即提交',
+      pullNow: '拉取',
+      autoSyncLabel: '自动同步',
+      autoSyncOn: '已开启',
+      autoSyncOff: '已关闭',
+      autoSyncNote: (poll) => `开启时每 ${poll}s 扫描、静默后自动提交；关闭后需要手动点「立即提交」。`,
+      autoSyncPaused: '自动同步已暂停，改动不会自动提交，记得手动点「立即提交」。',
+      autoSyncSaved: '自动同步设置已保存，插件正在重启…',
+      pushed: '已提交',
+      pulled: '已拉取',
       tokenButton: '设置 token',
       tokenLabel: 'GitHub token',
       tokenPlaceholder: 'ghp_… 或 github_pat_…',
@@ -235,6 +245,21 @@ window.__ModuleLoader__.load({
 .dshgb-segbtn--active { background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(79,140,255,.95)); color:#fff; box-shadow:0 4px 14px -6px rgba(124,92,255,.9); }
 .dshgb-segbtn:focus-visible { outline:2px solid #8be9fd; outline-offset:-2px; }
 .dshgb-info { display:flex; align-items:center; gap:9px; padding:10px 12px; border-radius:11px; background:rgba(124,92,255,.08); border:1px solid rgba(124,92,255,.22); font-size:11.5px; color:#b7bff0; }
+.dshgb-autorow { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); }
+.dshgb-autotext { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.dshgb-autotitle { display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:#eef1ff; }
+.dshgb-switch {
+  appearance:none; flex:none; width:46px; height:26px; border-radius:999px; cursor:pointer; position:relative; margin-left:auto;
+  border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); transition:background-color .18s ease, border-color .18s ease;
+}
+.dshgb-switch:focus-visible { outline:2px solid #8be9fd; outline-offset:2px; }
+.dshgb-switch::after {
+  content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#c7cdf0;
+  transition:transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+.dshgb-switch--on { border-color:rgba(124,92,255,.6); background:linear-gradient(135deg, rgba(124,92,255,.95), rgba(34,211,238,.85)); box-shadow:0 0 18px -4px rgba(124,92,255,.85); }
+.dshgb-switch--on::after { transform:translateX(20px); background:#ffffff; box-shadow:0 0 10px rgba(255,255,255,.8); }
+.dshgb-switch:disabled { opacity:.5; cursor:default; }
 
 /* nested sub-cards */
 .dshgb-subcard {
@@ -448,12 +473,14 @@ window.__ModuleLoader__.load({
         const [tokenDraft, setTokenDraft] = React.useState('')
         const [tokenOpen, setTokenOpen] = React.useState(false)
         const [tokenTouched, setTokenTouched] = React.useState(false)
+        const [autoOptimistic, setAutoOptimistic] = React.useState(null)
         const [status, setStatus] = React.useState(null)
         const [detailHidden, setDetailHidden] = React.useState(false)
         const [previewHidden, setPreviewHidden] = React.useState(false)
 
         const dispatch = dispatchFor(props?.sessionId)
         const hasSession = Boolean(props?.sessionId)
+        const autoOn = autoOptimistic === null ? statusInfo?.autoSync !== false : autoOptimistic
 
         const run = (label, line, options = {}) =>
           dispatch(line)
@@ -535,6 +562,43 @@ window.__ModuleLoader__.load({
               refreshStatus()
             },
           })
+        }
+
+        const manualPush = () => {
+          if (!hasSession) return
+          run(TEXT.pushNow, '/dsh-backup push', {
+            okText: `${TEXT.pushed} · ${TEXT.sent}`,
+            done: () => {
+              refreshVersions()
+              refreshStatus()
+            },
+          })
+        }
+
+        const manualPull = () => {
+          if (!hasSession) return
+          run(TEXT.pullNow, '/dsh-backup pull', {
+            okText: `${TEXT.pulled} · ${TEXT.sent}`,
+            done: () => {
+              refreshVersions()
+              refreshStatus()
+            },
+          })
+        }
+
+        const toggleAutoSync = () => {
+          if (!hasSession) return
+          const next = !autoOn
+          setAutoOptimistic(next)
+          dispatch(`/dsh-backup config set autoSync ${next ? 'true' : 'false'}`)
+            .then(() => {
+              setStatus({ kind: 'ok', text: TEXT.autoSyncSaved })
+              return dispatch('/dsh-backup status').catch(() => {})
+            })
+            .catch((error) => {
+              setAutoOptimistic(null)
+              setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` })
+            })
         }
 
         const switchWorkspace = (entry) => {
@@ -668,6 +732,10 @@ window.__ModuleLoader__.load({
           if (failing.length > 0) {
             bannerMessages.push(TEXT.bannerFailing(failing))
             bannerLevel = 'err'
+          }
+          if (statusInfo.autoSync === false) {
+            bannerMessages.push(TEXT.autoSyncPaused)
+            if (bannerLevel !== 'err') bannerLevel = 'warn'
           }
         }
 
@@ -969,9 +1037,25 @@ window.__ModuleLoader__.load({
               h('span', { key: 'helper', className: 'dshgb-helper' }, `当前：${configValues.layout === 'root' ? '仓库根' : 'workspaces/'}`),
             ]),
           ]),
-          h('div', { key: 'auto', className: 'dshgb-info' }, [
-            h('span', { key: 'dot', className: 'dshgb-dot dshgb-dot--pulse' }),
-            h('span', { key: 'text' }, TEXT.autoNote(poll)),
+          h('div', { key: 'auto', className: 'dshgb-autorow' }, [
+            h('div', { key: 'text', className: 'dshgb-autotext' }, [
+              h('span', { key: 'title', className: 'dshgb-autotitle' }, [
+                h('span', { key: 'dot', className: `dshgb-dot${autoOn ? ' dshgb-dot--pulse' : ' dshgb-dot--warn'}` }),
+                TEXT.autoSyncLabel,
+                h('span', { key: 'state', className: 'dshgb-meta' }, autoOn ? TEXT.autoSyncOn : TEXT.autoSyncOff),
+              ]),
+              h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.autoSyncNote(poll)),
+            ]),
+            h('button', {
+              key: 'switch',
+              type: 'button',
+              role: 'switch',
+              className: `dshgb-switch${autoOn ? ' dshgb-switch--on' : ''}`,
+              'aria-checked': autoOn,
+              'aria-label': TEXT.autoSyncLabel,
+              disabled: !hasSession,
+              onClick: toggleAutoSync,
+            }),
           ]),
           h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.configHint),
         ])
@@ -1002,6 +1086,8 @@ window.__ModuleLoader__.load({
                     h('p', { key: 'subtitle', className: 'dshgb-subtitle' }, TEXT.viewSubtitle),
                   ]),
                   h('div', { key: 'actions', className: 'dshgb-headactions' }, [
+                    btn('push', TEXT.pushNow, manualPush, { variant: 'secondary' }),
+                    btn('pull', TEXT.pullNow, manualPull, { variant: 'secondary' }),
                     btn(
                       'token',
                       tokenOpen ? TEXT.close : TEXT.tokenButton,
