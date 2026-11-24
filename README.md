@@ -1,5 +1,7 @@
 # dsh-git-backup
 
+[![CI](https://github.com/Bigdusk/dsh-git-backup/actions/workflows/ci.yml/badge.svg)](https://github.com/Bigdusk/dsh-git-backup/actions/workflows/ci.yml)
+
 > DeepSeek Harness 插件：把工作区的 `.dsh` 目录自动备份到 GitHub，并支持**预览 / 单文件回滚 / 撤销回滚**、参与备份的工作区管理与**不依赖 DSH 的灾难恢复脚本**。
 
 `.dsh` 是 DSH 工作区里的技能/插件目录。这个插件把它当作版本化数据来管理：改动静默几秒后自动提交，随时可以挑一个历史版本恢复，也可以在新机器上一条命令拉回来。
@@ -94,23 +96,35 @@ token 默认从 `%USERPROFILE%\.dsh\.env` 读 `GITHUB_TOKEN`，可用 `--token-e
 ## 开发与发布
 
 ```powershell
+# 零依赖测试套件（node:test，无需 npm install）
+node --test test
+
 # 把当前工作树发布到 GitHub（首次会建仓，之后重复运行即更新）
 node scripts/publish.mjs --repo Bigdusk/dsh-git-backup
 ```
+
+CI 在 `.github/workflows/ci.yml`：Linux/Windows × Node 20/22 跑同一套 `node --test test`。
 
 目录结构：
 
 ```
 index.js           插件装配（轮询、工具、命令、配置写入）
 client.js          「快照」视图（React，无构建步骤；含手动提交与自动同步开关）
-lib/engine.js      Git Data API 同步、回滚、工作区注册表、状态
+lib/engine.js      Git Data API 同步、回滚、工作区注册表、哈希缓存、串行锁
 lib/github.js      GitHub REST 客户端（重试、token 过期头）
 lib/commands.js    /dsh-backup 命令
 lib/tools.js       模型工具
 recover.mjs        独立灾难恢复脚本
+test/              node:test 套件（engine / commands / client / util）
 cordis.patch.yml   bundle patch 与默认配置
 docs/DETAIL.md     完整设计与行为说明
 ```
+
+### 性能与并发
+
+- **哈希缓存**：`$DSH_HOME/dsh-git-backup/blob-cache.json` 记录 `mtime + size → git blob sha`；未变化的文件不再读盘，只在上传/比对失败时读取。
+- **注册表并发保护**：`workspaces.json` 的读改写走跨进程锁文件 + 原子替换，多个实例同时改不会互相覆盖；30 秒以上的陈旧锁会被回收。
+- **串行锁**：同一工作区的 push / pull / rollback 串行执行，不同工作区并行。
 
 ## 许可证
 

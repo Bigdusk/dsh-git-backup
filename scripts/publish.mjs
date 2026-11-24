@@ -20,6 +20,7 @@ const packageRoot = path.resolve(here, '..')
 const SKIP_DIRECTORIES = new Set(['node_modules', '.git', '.plugin-manager', 'dist', 'coverage'])
 const SKIP_FILES = new Set(['.env', 'package-lock.json', 'pnpm-lock.yaml'])
 const ALLOWED_TOP_LEVEL = new Set([
+  '.github',
   '.gitignore',
   'LICENSE',
   'README.md',
@@ -29,6 +30,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   'icon.svg',
   'index.js',
   'lib',
+  'test',
   'locale',
   'package.json',
   'recover.mjs',
@@ -52,30 +54,28 @@ function parseArguments(argv) {
   return args
 }
 
-const RELEASE_NOTES = `## dsh-git-backup v1.7.0
+const RELEASE_NOTES = `## dsh-git-backup v1.8.0
 
-### 数据安全
+### 性能
 
-- **冲突检测**：记录远端 HEAD；自动提交前若发现远端已被其他设备改动，自动提交中止并提示，不再静默覆盖。手动「立即提交」仍可覆盖（工具可传 allowOverwrite）。
-- **串行锁**：push / pull / rollback 对同一工作区串行执行，杜绝"自动提交读到半回滚状态"的中间态提交。
+- **文件哈希缓存**：\`$DSH_HOME/dsh-git-backup/blob-cache.json\` 保存 \`mtime + size → git blob sha\`；未变化的文件不再读盘，只有真正要上传或比对失败时才读取。缓存上限 20000 条，改文件后自动失效，重启后复用。
 
-### 体验
+### 并发安全
 
-- **自动同步开关立即生效、不重启**：改为运行时开关 + 偏好文件 \`prefs.json\`（启动时读取），不再改 profile 配置。
-- **失败通知**：自动提交连续失败时，向当前会话注入一条提醒（每小时最多一次），并保留在状态/提示条。
-- **提交分类徽章**：历史行标注「自动 / 手动 / 回滚 / 保护」。
-- **版本与文件搜索**：版本列表按说明/sha 过滤，详情与预览按文件路径过滤。
-- **内容改动（diff）**：版本行新增「改动」，详情里每个文件可单看 patch，绿加红删。
-- **仓库体检**：配置卡「体检」，给出仓库大小与逐文件一致性。
-- **移除 token**：配置卡「移除 token」清理 \`.env\` 与进程环境变量。
+- **工作区注册表跨进程锁**：\`workspaces.json\` 的读改写通过 \`workspaces.lock\` 独占锁 + 原子替换完成；30 秒以上的陈旧锁自动回收，多个 DSH 实例同时增删工作区不会互相覆盖。
 
-### Agent 工具
+### 测试与 CI
 
-- 新增 \`dsh_backup_health\`、\`dsh_backup_diff\`，工具总数 10。
+- 新增 \`test/\`：**22 个用例**，\`node --test test\` 零依赖运行。
+  - \`engine.test.mjs\`：偏好持久化、同/跨工作区锁、哈希缓存复用与失效、注册表并发写与陈旧锁、冲突保护、token 清理。
+  - \`commands.test.mjs\`：auto 开关不写配置、token 保存/清除、diff/health 与结构化 payload、config 写入、未知命令用法。
+  - \`client.test.mjs\`：视图外壳、提交分类徽章、diff 着色、体检卡、自动同步开关即时生效。
+  - \`util.test.mjs\`：git blob sha 向量、dotenv 往返、过滤规则、扫描与快照哈希。
+- \`.github/workflows/ci.yml\`：Linux/Windows × Node 20/22 跑同一套测试。
 
-### 未完成（下一轮）
+### 未完成
 
-- UI 数据仍走命令日志里的结构化 payload（"文本通道"），尚未改为 session projection / 正式 RPC；对话里仍会留下刷新命令记录。`
+- UI 数据仍走命令日志里的结构化 payload（"文本通道"），尚未改为 session projection / 正式 RPC。`
 
 function collectFiles(directory, prefix = '') {
   const files = []

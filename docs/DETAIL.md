@@ -47,8 +47,13 @@
 
 视图数据都来自命令产生的会话日志：把 Host 返回的结构化结果（`⟦dshb:{…}⟧` 标记）从 `command/done` 事件里解析出来渲染，所以这些结果同时也会作为命令记录出现在「对话」里——这正是「会话日志是唯一真相」的代价，不做额外隐藏通道。
 
-### 本地保护（覆盖前先保存）
+### 性能与并发
 
+- **哈希缓存**：`$DSH_HOME/dsh-git-backup/blob-cache.json` 记录 `mtime + size → git blob sha`，未变化文件不再读盘；缓存条目上限 20000，文件内容变化后自动失效。
+- **注册表锁**：`workspaces.json` 的读改写走跨进程锁文件（`workspaces.lock`）+ 原子替换，30 秒以上的陈旧锁自动回收。
+- **测试与 CI**：`node --test test`（零依赖）覆盖 engine（锁、哈希缓存、冲突保护、注册表并发、token）、commands、客户端渲染与工具函数；`.github/workflows/ci.yml` 在 Linux/Windows × Node 20/22 上运行。
+
+### 本地保护（覆盖前先保存）
 拉取和回滚都会重写本地文件。执行前插件会先做一次 **不删除远端文件的自动保存提交**（`autosave-before-restore`）：
 
 - 本地为空或没有差异时完全跳过，不会凭空产生提交；
