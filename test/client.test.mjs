@@ -128,6 +128,7 @@ test('client renders the snapshot view shell', async () => {
   assert.ok(ui.text().includes('var(--dsw-alias-bg-base)'), 'theme uses host tokens')
   assert.ok(ui.text().includes('.dshgb-overlay'), 'modal styles present')
   assert.ok(!ui.text().includes('#0d1020'), 'old dark palette removed')
+  assert.ok(ui.text().includes('color:var(--dsw-alias-bg-base)'), 'brand fills use adaptive foreground')
 })
 
 test('client shows commit badges, diff and health', async () => {

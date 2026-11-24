@@ -54,7 +54,14 @@ function parseArguments(argv) {
   return args
 }
 
-const RELEASE_NOTES = `## dsh-git-backup v1.9.0
+const RELEASE_NOTES = `## dsh-git-backup v1.9.1
+
+### 深色主题修复
+
+- 主按钮 / 品牌图标 / 分段控件选中项的前景色由固定白色改为 「--dsw-alias-bg-base」：浅色主题下仍是白字，深色主题下自动变成深色字，不会再出现“白底白字/按钮消失”。
+- 自动同步开关选中状态的滑块同样改用 「--dsw-alias-bg-base」，深色主题下在亮色品牌轨道上清晰可见。
+
+## dsh-git-backup v1.9.0
 
 ### 主题：深色 → 浅色 + 自适应
 
