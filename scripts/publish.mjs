@@ -36,7 +36,7 @@ const ALLOWED_TOP_LEVEL = new Set([
 ])
 
 function parseArguments(argv) {
-  const args = { name: '', branch: 'main', private: false, message: '' }
+  const args = { name: '', branch: 'main', private: false, message: '', tag: '' }
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index]
     if (token === '--private') {
@@ -51,6 +51,32 @@ function parseArguments(argv) {
   }
   return args
 }
+
+const RELEASE_NOTES = `## dsh-git-backup v1.1.0
+
+DeepSeek Harness 插件：把工作区 \`.dsh\` 自动备份到 GitHub。
+
+### 新增
+
+- **版本预览**：回滚前先看「将写入 / 将删除 / 不变」清单，不动磁盘。
+- **单文件恢复**：从任意版本只恢复某个文件或目录（\`--only\` / 版本详情里的「仅恢复」）。
+- **撤销回滚**：一键回到上一次回滚之前的状态。
+- **版本详情**：每个版本改动的文件与 \`+N −M\` 行数。
+- **覆盖前保护**：拉取/回滚前自动推一个不删远端文件的 \`autosave-before-restore\` 提交。
+- **可视化配置**：「备份」视图里改仓库/分支/轮询/布局/自动同步。
+- **灾难恢复脚本**：\`recover.mjs\` 用普通 Node 恢复备份，不依赖 DSH 运行时。
+- **token 续期提醒**：读取 GitHub 响应里的过期时间，剩余 14 天内提示。
+
+### 界面
+
+- 「备份」会话视图（与「对话」「轨迹」同排）：版本回滚、工作区、仓库配置三个平面化区块。
+- 输入框下方常驻控制条：状态 / 推送 / 拉取 / 自动同步 + 设置（界面里保存 token）。
+
+### 已知限制
+
+- 只备份 \`<工作区>/.dsh\`，不备份 \`$DSH_HOME\`。
+- 依赖 GitHub REST API（不依赖本机 git）。
+- 配置保存会重启插件行一次。`
 
 function collectFiles(directory, prefix = '') {
   const files = []
@@ -183,5 +209,33 @@ try {
 const ref = await client.getRef(repository, branch)
 const finalCommit = await client.getCommit(repository, ref.commitSha)
 const tree = await client.getTree(repository, finalCommit.treeSha)
+
+if (args.tag) {
+  const tagName = String(args.tag)
+  const tagPath = `/repos/${repository.owner}/${repository.name}`
+  try {
+    let exists = false
+    try {
+      await client.request('GET', `${tagPath}/git/ref/tags/${encodeURIComponent(tagName)}`)
+      exists = true
+    } catch (error) {
+      if (error?.code !== 'not-found') throw error
+    }
+    if (exists) {
+      console.log(`标签 ${tagName} 已存在，跳过 Release。`)
+    } else {
+      await client.request('POST', `${tagPath}/git/refs`, {
+        body: { ref: `refs/tags/${tagName}`, sha: ref.commitSha },
+      })
+      await client.request('POST', `${tagPath}/releases`, {
+        body: { tag_name: tagName, name: tagName, body: RELEASE_NOTES, draft: false, prerelease: false },
+      })
+      console.log(`已创建标签与 Release：${tagName}`)
+    }
+  } catch (error) {
+    console.warn(`Release 创建失败（代码已发布）：${error?.message ?? error}`)
+  }
+}
+
 console.log(`\n发布完成：https://github.com/${repository.fullName}`)
 console.log(`分支 ${branch} HEAD ${ref.commitSha.slice(0, 10)}，远端 ${tree.files.size} 个文件`)
