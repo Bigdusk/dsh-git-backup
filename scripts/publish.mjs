@@ -52,21 +52,19 @@ function parseArguments(argv) {
   return args
 }
 
-const RELEASE_NOTES = `## dsh-git-backup v1.2.0
+const RELEASE_NOTES = `## dsh-git-backup v1.2.1
 
 ### 变更
 
-- **同步全自动**：移除输入框下方的常驻控制条，以及「推送 / 拉取 / 自动同步 / 状态」等手动同步按钮。默认每 15s 扫描、静默 4s 自动提交。
-- **单一界面**：所有 UI 收敛到「备份」会话视图（与「对话」「轨迹」同排）：版本回滚、工作区、配置三个平面化区块。
-- **token 移入配置区**：「备份」页 → 「配置」→ 密码框 + 「保存 token」，标签处显示「未配置 / 已配置 / 还有 N 天过期」。
-- **状态提示条**：token 缺失/临期、自动同步失败会显示在视图顶部；同步失败仍可通过 \`dsh_backup_status\` 或 \`/dsh-backup status\` 查明细。
+- **恢复「设置 token」按钮**：「备份」视图右上角常驻该按钮，点开是 GitHub token 密码框 + 「保存 token」；未配置 token 时表单自动展开，标签处显示「未配置 / 已配置 / 还有 N 天过期」。
+- **自动同步回归纯默认**：「配置」区不再有开/关切换，只显示「自动同步：开（默认，每 N 秒检查）」；需要临时关闭用 \`/dsh-backup auto off\`。
+- 仓库 / 分支 / 轮询 / 远端布局仍在「配置」区可改。
 
-### 仍然保留
+### 不变的默认行为
 
-- 版本预览、单文件恢复、撤销回滚、版本详情、工作区管理、可视化配置。
-- 覆盖前 \`autosave-before-restore\` 保护；增量 blob 提交；自动建仓。
-- 灾难恢复脚本 \`recover.mjs\`（不依赖 DSH 运行时）。
-- 斜杠命令与 8 个模型工具（手动操作留给命令/agent，不占界面）。`
+- 每 15s 扫描工作区 \`.dsh\`，静默 4s 后自动提交；首次有 token 即自动全量备份并自动建私有仓库。
+- 所有带 \`.dsh\` 的工作区默认参与备份（可在「工作区」区停用）。
+- 拉取/回滚前自动 \`autosave-before-restore\`；版本预览、单文件恢复、撤销回滚、版本详情、灾难恢复脚本 \`recover.mjs\` 均保留。`
 
 function collectFiles(directory, prefix = '') {
   const files = []

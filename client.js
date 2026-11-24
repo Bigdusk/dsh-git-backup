@@ -45,6 +45,7 @@ window.__ModuleLoader__.load({
       layoutLabel: '远端布局',
       autoLabel: '自动同步',
       tokenLabel: 'GitHub token',
+      tokenButton: '设置 token',
       tokenPlaceholder: 'ghp_… 或 github_pat_…',
       tokenHint: '需要 repo 权限 · 保存到 %USERPROFILE%\\.dsh\\.env · 不写入对话记录',
       tokenSaved: 'token 已保存并验证',
@@ -68,6 +69,8 @@ window.__ModuleLoader__.load({
 .dshgb-view { box-sizing:border-box; width:100%; height:100%; overflow:auto; padding:32px 40px 48px; font-size:12.5px; line-height:1.55; color:var(--dsw-alias-label-secondary); }
 .dshgb-viewinner { display:flex; flex-direction:column; gap:28px; max-width:900px; margin:0 auto; }
 .dshgb-viewhead { display:flex; flex-direction:column; gap:6px; }
+.dshgb-viewtitlerow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.dshgb-viewactions { display:flex; align-items:center; gap:8px; margin-left:auto; }
 .dshgb-viewtitle { margin:0; font-size:17px; font-weight:600; letter-spacing:.01em; color:var(--dsw-alias-label-primary); }
 .dshgb-viewhint { margin:0; max-width:64ch; }
 .dshgb-banner { display:flex; gap:8px; align-items:flex-start; padding:10px 12px; border-radius:10px; background:var(--dsw-alias-bg-layer-1); color:var(--dsw-alias-state-warn-primary); }
@@ -248,6 +251,8 @@ window.__ModuleLoader__.load({
         const [workspacePathDraft, setWorkspacePathDraft] = React.useState('')
         const [configDraft, setConfigDraft] = React.useState({ repo: '', branch: '', pollSeconds: '' })
         const [tokenDraft, setTokenDraft] = React.useState('')
+        const [tokenOpen, setTokenOpen] = React.useState(false)
+        const [tokenTouched, setTokenTouched] = React.useState(false)
         const [status, setStatus] = React.useState(null)
         const [detailHidden, setDetailHidden] = React.useState(false)
         const [previewHidden, setPreviewHidden] = React.useState(false)
@@ -365,6 +370,8 @@ window.__ModuleLoader__.load({
           dispatch(`/dsh-backup token ${value}`)
             .then(() => {
               setTokenDraft('')
+              setTokenTouched(true)
+              setTokenOpen(false)
               setStatus({ kind: 'ok', text: TEXT.tokenSaved })
               return dispatch('/dsh-backup status').catch(() => {})
             })
@@ -404,15 +411,11 @@ window.__ModuleLoader__.load({
             .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
         }
 
-        const setAutoSync = (enabled) => {
-          if (!hasSession) return
-          dispatch(`/dsh-backup config set autoSync ${enabled ? 'true' : 'false'}`)
-            .then(() => {
-              setStatus({ kind: 'ok', text: TEXT.configSaved })
-              return dispatch('/dsh-backup config').catch(() => {})
-            })
-            .catch((error) => setStatus({ kind: 'err', text: `${TEXT.failed}: ${error?.message ?? String(error)}` }))
-        }
+        // Open the token form automatically while no token is configured.
+        React.useEffect(() => {
+          if (tokenTouched || tokenOpen) return
+          if (statusInfo?.token && statusInfo.token.present === false) setTokenOpen(true)
+        }, [statusInfo?.token?.present, tokenTouched, tokenOpen])
 
         React.useEffect(() => {
           if (!props?.sessionId) return
@@ -572,17 +575,18 @@ window.__ModuleLoader__.load({
             ? ''
             : TEXT.tokenMissing
 
-        const configSection = h('section', { key: 'config', className: 'dshgb-section', 'aria-label': TEXT.config }, [
-          h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
-            h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.config),
-            h('div', { key: 'actions', className: 'dshgb-sectionactions' }, [
-              textButton('save', TEXT.save, saveConfig),
-              textButton('reload', TEXT.refresh, loadConfig),
-            ]),
-          ]),
-          h('div', { key: 'grid', className: 'dshgb-configgrid' }, [
-            h('label', { key: 'token', className: 'dshgb-fieldgroup' }, [
-              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, `${TEXT.tokenLabel}${tokenLabel ? `（${tokenLabel}）` : ''}`),
+        const tokenPanel = tokenOpen
+          ? h('div', { key: 'token', className: 'dshgb-box', role: 'group', 'aria-label': TEXT.tokenButton }, [
+              h('div', { key: 'head', className: 'dshgb-boxhead' }, [
+                h('span', { key: 'title', className: 'dshgb-boxtitle' }, TEXT.tokenLabel),
+                tokenLabel ? h('span', { key: 'state', className: 'dshgb-meta' }, tokenLabel) : null,
+                h('div', { key: 'actions', className: 'dshgb-boxactions' }, [
+                  textButton('close', TEXT.close, () => {
+                    setTokenTouched(true)
+                    setTokenOpen(false)
+                  }),
+                ]),
+              ]),
               h('div', { key: 'row', className: 'dshgb-row' }, [
                 h('input', {
                   key: 'input',
@@ -593,6 +597,8 @@ window.__ModuleLoader__.load({
                   autoComplete: 'off',
                   autoCorrect: 'off',
                   spellCheck: false,
+                  autoFocus: true,
+                  'aria-label': TEXT.tokenLabel,
                   disabled: tokenBusy,
                   onChange: (event) => setTokenDraft(event.target.value),
                   onKeyDown: (event) => {
@@ -605,7 +611,18 @@ window.__ModuleLoader__.load({
                 textButton('save-token', tokenBusy ? '…' : '保存 token', saveToken, { accent: true, disabled: tokenBusy }),
               ]),
               h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.tokenHint),
+            ])
+          : null
+
+        const configSection = h('section', { key: 'config', className: 'dshgb-section', 'aria-label': TEXT.config }, [
+          h('div', { key: 'head', className: 'dshgb-sectionhead' }, [
+            h('h3', { key: 'title', className: 'dshgb-sectiontitle' }, TEXT.config),
+            h('div', { key: 'actions', className: 'dshgb-sectionactions' }, [
+              textButton('save', TEXT.save, saveConfig),
+              textButton('reload', TEXT.refresh, loadConfig),
             ]),
+          ]),
+          h('div', { key: 'grid', className: 'dshgb-configgrid' }, [
             h('label', { key: 'repo', className: 'dshgb-fieldgroup' }, [
               h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.repoLabel),
               h('input', {
@@ -651,14 +668,12 @@ window.__ModuleLoader__.load({
                 textButton('root', '仓库根', () => setLayout('root'), { accent: configValues.layout === 'root' }),
               ]),
             ]),
-            h('div', { key: 'auto', className: 'dshgb-fieldgroup' }, [
-              h('span', { key: 'label', className: 'dshgb-fieldlabel' }, TEXT.autoLabel),
-              h('div', { key: 'row', className: 'dshgb-row' }, [
-                textButton('on', TEXT.on, () => setAutoSync(true), { accent: configValues.autoSync === true }),
-                textButton('off', TEXT.off, () => setAutoSync(false), { accent: configValues.autoSync === false }),
-              ]),
-            ]),
           ]),
+          h(
+            'span',
+            { key: 'auto', className: 'dshgb-hint' },
+            `${TEXT.autoLabel}：开（默认，每 ${configValues.pollSeconds ?? 15} 秒检查一次；需要临时关闭可用 /dsh-backup auto off）`,
+          ),
           h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.configHint),
         ])
 
@@ -736,9 +751,24 @@ window.__ModuleLoader__.load({
           h('style', { key: 'style' }, STYLES),
           h('div', { key: 'inner', className: 'dshgb-viewinner' }, [
             h('header', { key: 'head', className: 'dshgb-viewhead' }, [
-              h('h2', { key: 'title', className: 'dshgb-viewtitle' }, TEXT.viewTitle),
+              h('div', { key: 'titlerow', className: 'dshgb-viewtitlerow' }, [
+                h('h2', { key: 'title', className: 'dshgb-viewtitle' }, TEXT.viewTitle),
+                h('div', { key: 'actions', className: 'dshgb-viewactions' }, [
+                  tokenLabel ? h('span', { key: 'state', className: 'dshgb-hint' }, tokenLabel) : null,
+                  textButton(
+                    'token',
+                    tokenOpen ? TEXT.close : TEXT.tokenButton,
+                    () => {
+                      setTokenTouched(true)
+                      setTokenOpen((open) => !open)
+                    },
+                    { accent: !tokenState?.present || tokenOpen },
+                  ),
+                ]),
+              ]),
               h('p', { key: 'hint', className: 'dshgb-viewhint' }, TEXT.viewHint),
             ]),
+            tokenPanel,
             banner,
             section(
               'versions',
