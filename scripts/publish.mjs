@@ -54,7 +54,14 @@ function parseArguments(argv) {
   return args
 }
 
-const RELEASE_NOTES = `## dsh-git-backup v1.9.1
+const RELEASE_NOTES = `## dsh-git-backup v1.9.2
+
+### 弹窗数据修复
+
+- 打开「详情 / 预览 / 改动 / 体检」时先清空该类缓存，并校验返回结果的 SHA（改动还校验路径）与请求一致，等待期间显示骨架行。
+- 修复点击不同版本时先闪出上一个版本旧数据的问题；不同版本之间不再共用渲染缓存。
+
+## dsh-git-backup v1.9.1
 
 ### 深色主题修复
 

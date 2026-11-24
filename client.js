@@ -419,14 +419,14 @@ window.__ModuleLoader__.load({
           }
         }
       }, [sessionId])
-      return payloads
+      return [payloads, (kind) => setPayloads((current) => ({ ...current, [kind]: null }))]
     }
 
     function makeView(ctx) {
       const dispatchFor = createDispatcher(ctx)
 
       return function BackupView(props) {
-        const payloads = usePluginPayloads(ctx, props?.sessionId)
+        const [payloads, resetPayload] = usePluginPayloads(ctx, props?.sessionId)
         const versions = payloads.versions ?? []
         const workspaces = payloads.workspaces ?? []
         const statusInfo = payloads.status ?? null
@@ -505,12 +505,15 @@ window.__ModuleLoader__.load({
 
         const openDetail = (sha) => {
           if (!hasSession) return
+          setFileQuery('')
+          resetPayload('detail')
           setModal({ kind: 'detail', sha })
           run(TEXT.detail, `/dsh-backup detail ${sha}`)
         }
 
         const openPreview = (sha) => {
           if (!hasSession) return
+          resetPayload('preview')
           setModal({ kind: 'preview', sha })
           run(TEXT.preview, `/dsh-backup preview ${sha}`)
         }
@@ -563,12 +566,14 @@ window.__ModuleLoader__.load({
 
         const openDiff = (sha, filePath) => {
           if (!hasSession) return
+          resetPayload('diff')
           setModal({ kind: 'diff', sha, path: filePath })
           run(TEXT.diffTitle, `/dsh-backup diff ${sha}${filePath ? ` ${filePath}` : ''}`)
         }
 
         const runHealth = () => {
           if (!hasSession) return
+          resetPayload('health')
           setModal({ kind: 'health' })
           run(TEXT.healthBtn, '/dsh-backup health')
         }
@@ -855,6 +860,19 @@ window.__ModuleLoader__.load({
                 ]),
               )
 
+        const shaMatches = (data, sha) => {
+          const a = String(data?.sha ?? '').toLowerCase()
+          const b = String(sha ?? '').toLowerCase()
+          return Boolean(a) && Boolean(b) && (a === b || a.startsWith(b) || b.startsWith(a))
+        }
+        const modalDetail = modal?.kind === 'detail' && shaMatches(detail, modal.sha) ? detail : null
+        const modalPreview = modal?.kind === 'preview' && shaMatches(preview, modal.sha) ? preview : null
+        const modalDiff =
+          modal?.kind === 'diff' && shaMatches(diff, modal.sha) && String(diff?.requested ?? '') === String(modal.path ?? '')
+            ? diff
+            : null
+        const modalHealth = modal?.kind === 'health' ? health : null
+
         const fileFilter = fileQuery.trim().toLowerCase()
 
         const closeModal = () => setModal(null)
@@ -895,8 +913,8 @@ window.__ModuleLoader__.load({
 
         const modalBody = () => {
           if (modal.kind === 'detail') {
-            if (!detail) return loadingBody()
-            const files = (detail.files ?? []).filter((file) => !fileFilter || file.path.toLowerCase().includes(fileFilter))
+            if (!modalDetail) return loadingBody()
+            const files = (modalDetail.files ?? []).filter((file) => !fileFilter || file.path.toLowerCase().includes(fileFilter))
             return [
               h('div', { key: 'search', className: 'dshgb-search' }, [
                 h('input', {
@@ -923,26 +941,26 @@ window.__ModuleLoader__.load({
                           ' ',
                           h('span', { key: 'del', className: 'dshgb-del' }, `−${file.deletions}`),
                         ]),
-                        btn('show-diff', TEXT.diffBtn, () => openDiff(detail.sha, file.path), { tiny: true, disabled: versionBusy }),
-                        btn('only', TEXT.onlyThis, () => rollbackTo(detail.sha, [file.path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
+                        btn('show-modalDiff', TEXT.diffBtn, () => openDiff(modalDetail.sha, file.path), { tiny: true, disabled: versionBusy }),
+                        btn('only', TEXT.onlyThis, () => rollbackTo(modalDetail.sha, [file.path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                       ]),
                     ),
                   ),
             ]
           }
           if (modal.kind === 'preview') {
-            if (!preview) return loadingBody()
+            if (!modalPreview) return loadingBody()
             const rows = []
-            for (const path of (preview.write ?? []).slice(0, 60)) {
+            for (const path of (modalPreview.write ?? []).slice(0, 60)) {
               rows.push(
                 h('div', { key: `w-${path}`, className: 'dshgb-file' }, [
                   h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
                   h('span', { key: 'kind', className: 'dshgb-filediff dshgb-add' }, '写入'),
-                  btn('only', TEXT.onlyThis, () => rollbackTo(preview.sha, [path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
+                  btn('only', TEXT.onlyThis, () => rollbackTo(modalPreview.sha, [path]), { variant: 'primary', tiny: true, disabled: versionBusy }),
                 ]),
               )
             }
-            for (const path of (preview.remove ?? []).slice(0, 60)) {
+            for (const path of (modalPreview.remove ?? []).slice(0, 60)) {
               rows.push(
                 h('div', { key: `r-${path}`, className: 'dshgb-file' }, [
                   h('span', { key: 'path', className: 'dshgb-filepath', title: path }, path),
@@ -954,8 +972,8 @@ window.__ModuleLoader__.load({
             return rows
           }
           if (modal.kind === 'diff') {
-            if (!diff) return loadingBody()
-            const files = (diff.files ?? []).filter((file) => !modal.path || file.path.includes(modal.path) || !file.path)
+            if (!modalDiff) return loadingBody()
+            const files = (modalDiff.files ?? []).filter((file) => !modal.path || file.path.includes(modal.path) || !file.path)
             if (files.length === 0) return [h('div', { key: 'empty', className: 'dshgb-hint' }, TEXT.noFiles)]
             const blocks = []
             for (const file of files.slice(0, 8)) {
@@ -970,18 +988,18 @@ window.__ModuleLoader__.load({
             }
             return blocks
           }
-          if (!health) return loadingBody()
-          const problems = [...(health.mismatch ?? []), ...(health.missing ?? [])]
+          if (!modalHealth) return loadingBody()
+          const problems = [...(modalHealth.mismatch ?? []), ...(modalHealth.missing ?? [])]
           return [
             h('div', { key: 'row', className: 'dshgb-healthrow' }, [
-              h('span', { key: 'counts', className: 'dshgb-meta' }, `${health.repository} · 约 ${TEXT.healthSize(health.repoSizeKb)} · 远端 ${health.remoteCount} / 本地 ${health.localCount} · 一致 ${health.same}`),
+              h('span', { key: 'counts', className: 'dshgb-meta' }, `${modalHealth.repository} · 约 ${TEXT.healthSize(modalHealth.repoSizeKb)} · 远端 ${modalHealth.remoteCount} / 本地 ${modalHealth.localCount} · 一致 ${modalHealth.same}`),
             ]),
             h('div', { key: 'row2', className: 'dshgb-healthrow' }, [
-              (health.mismatch ?? []).length ? h('span', { key: 'm', className: 'dshgb-meta dshgb-del' }, `内容不一致 ${health.mismatch.length}`) : null,
-              (health.missing ?? []).length ? h('span', { key: 'x', className: 'dshgb-meta dshgb-add' }, `本地未备份 ${health.missing.length}`) : null,
-              (health.extra ?? []).length ? h('span', { key: 'e', className: 'dshgb-meta' }, `远端多出 ${health.extra.length}`) : null,
+              (modalHealth.mismatch ?? []).length ? h('span', { key: 'm', className: 'dshgb-meta dshgb-del' }, `内容不一致 ${modalHealth.mismatch.length}`) : null,
+              (modalHealth.missing ?? []).length ? h('span', { key: 'x', className: 'dshgb-meta dshgb-add' }, `本地未备份 ${modalHealth.missing.length}`) : null,
+              (modalHealth.extra ?? []).length ? h('span', { key: 'e', className: 'dshgb-meta' }, `远端多出 ${modalHealth.extra.length}`) : null,
             ]),
-            problems.length === 0 && (health.extra ?? []).length === 0
+            problems.length === 0 && (modalHealth.extra ?? []).length === 0
               ? h('div', { key: 'ok', className: 'dshgb-hint' }, TEXT.healthOk)
               : h('div', { key: 'paths', className: 'dshgb-hint' }, problems.slice(0, 20).join('、')),
           ]
@@ -1021,17 +1039,17 @@ window.__ModuleLoader__.load({
                       h('span', { key: 'title', className: 'dshgb-dialogtitle' }, dialogTitle(modal.kind)),
                       modal.sha ? h('span', { key: 'sha', className: 'dshgb-meta' }, String(modal.sha).slice(0, 10)) : null,
                       modal.kind === 'diff' && modal.path ? h('span', { key: 'path', className: 'dshgb-meta' }, modal.path) : null,
-                      modal.kind === 'preview' && preview
-                        ? h('span', { key: 'counts', className: 'dshgb-meta' }, `写入 ${preview.write?.length ?? 0} · 删除 ${preview.remove?.length ?? 0} · 不变 ${preview.unchanged ?? 0}`)
+                      modal.kind === 'preview' && modalPreview
+                        ? h('span', { key: 'counts', className: 'dshgb-meta' }, `写入 ${modalPreview.write?.length ?? 0} · 删除 ${modalPreview.remove?.length ?? 0} · 不变 ${modalPreview.unchanged ?? 0}`)
                         : null,
                       h('span', { key: 'spacer', style: { flex: '1 1 auto' } }),
                       btn('close', TEXT.close, closeModal, { tiny: true }),
                     ]),
                     h('div', { key: 'body', className: 'dshgb-dialogbody' }, modalBody()),
-                    modal.kind === 'preview' && preview
+                    modal.kind === 'preview' && modalPreview
                       ? h('div', { key: 'foot', className: 'dshgb-dialogfoot' }, [
                           btn('cancel', TEXT.cancel, closeModal, { tiny: true }),
-                          btn('confirm', TEXT.confirmAll, () => rollbackTo(preview.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
+                          btn('confirm', TEXT.confirmAll, () => rollbackTo(modalPreview.sha), { variant: 'primary', tiny: true, disabled: versionBusy }),
                         ])
                       : null,
                   ],

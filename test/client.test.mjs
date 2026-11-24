@@ -104,12 +104,13 @@ function createHarness() {
   const byClass = (name) => elements().filter((element) => String(element.props.className ?? '').includes(name))
   const buttons = () => elements().filter((element) => element.type === 'button')
   const byText = (label) => buttons().find((button) => flat(button).some((item) => item.text === label))
+  const buttonsWithText = (label) => buttons().filter((button) => flat(button).some((item) => item.text === label))
   const emit = (payload) => {
     entries = [...entries, { type: 'event', event: { type: 'command/done', data: { text: `⟦dshb:${JSON.stringify(payload)}⟧` } } }]
     for (const listener of listeners) listener()
     render()
   }
-  return { render, text, elements, byClass, byText, emit, calls }
+  return { render, text, elements, byClass, byText, buttonsWithText, emit, calls }
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -155,7 +156,7 @@ test('client shows commit badges, diff and health', async () => {
   diffButton.props.onClick()
   ui.render()
   assert.equal(ui.byClass('dshgb-overlay').length, 1, 'detail opens as a modal')
-  ui.emit({ kind: 'diff', short: 'aaa1111111', files: [{ path: 'skills/a.md', additions: 1, deletions: 1, patch: '@@ -1 +1 @@\n-old\n+new' }] })
+  ui.emit({ kind: 'diff', sha: 'aaa1111111', short: 'aaa1111111', files: [{ path: 'skills/a.md', additions: 1, deletions: 1, patch: '@@ -1 +1 @@\n-old\n+new' }] })
   assert.equal(ui.elements().filter((element) => element.props.className === 'dshgb-dialog').length, 1)
   assert.ok(ui.text().includes('new'))
   assert.ok(ui.byClass('dshgb-diffline--add').length >= 1)
@@ -166,7 +167,7 @@ test('client shows commit badges, diff and health', async () => {
 
   ui.byText('详情').props.onClick()
   ui.render()
-  ui.emit({ kind: 'detail', short: 'aaa1111111', files: [{ path: 'skills/a.md', additions: 1, deletions: 1 }] })
+  ui.emit({ kind: 'detail', sha: 'aaa1111111', short: 'aaa1111111', files: [{ path: 'skills/a.md', additions: 1, deletions: 1 }] })
   assert.ok(ui.text().includes('skills/a.md'))
   ui.byText('关闭').props.onClick()
   ui.render()
@@ -194,4 +195,52 @@ test('auto-sync switch dispatches the instant runtime command', async () => {
   await settle()
   assert.ok(ui.calls.includes('/dsh-backup auto off'))
   assert.ok(!ui.calls.some((line) => line.includes('config set autoSync')))
+})
+
+test('modal waits for the requested version instead of showing stale data', async () => {
+  const ui = createHarness()
+  ui.render()
+  await settle()
+  ui.render()
+  ui.emit({ kind: 'status', autoSync: true, token: { present: true, daysLeft: 20 }, failingRoots: [], roots: [] })
+  ui.emit({
+    kind: 'versions',
+    items: [
+      { n: 1, sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', short: 'aaaaaaaaaa', date: new Date().toISOString(), message: 'backup(T): A' },
+      { n: 2, sha: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', short: 'bbbbbbbbbb', date: new Date().toISOString(), message: 'backup(T): B' },
+    ],
+  })
+
+  // open A, deliver A data
+  ui.buttonsWithText('预览')[0].props.onClick()
+  ui.render()
+  assert.equal(ui.byClass('dshgb-skeleton').length, 1, 'modal shows loading before data arrives')
+  ui.emit({
+    kind: 'preview',
+    sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    short: 'aaaaaaaaaa',
+    write: ['skills/a-old.md'],
+    remove: [],
+    unchanged: 0,
+  })
+  assert.ok(ui.text().includes('skills/a-old.md'))
+
+  // close, open B: A's data must not leak into B's dialog
+  ui.byText('取消').props.onClick()
+  ui.render()
+  ui.buttonsWithText('预览')[1].props.onClick()
+  ui.render()
+  assert.ok(!ui.text().includes('skills/a-old.md'), 'stale version data is not rendered')
+  assert.equal(ui.byClass('dshgb-skeleton').length, 1, 'still loading for B')
+
+  ui.emit({
+    kind: 'preview',
+    sha: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    short: 'bbbbbbbbbb',
+    write: ['skills/b-new.md'],
+    remove: [],
+    unchanged: 0,
+  })
+  assert.ok(ui.text().includes('skills/b-new.md'))
+  assert.ok(!ui.text().includes('skills/a-old.md'))
 })
