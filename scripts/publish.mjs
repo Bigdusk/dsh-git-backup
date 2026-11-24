@@ -223,11 +223,24 @@ if (args.tag) {
     if (exists) {
       console.log(`标签 ${tagName} 已存在，跳过 Release。`)
     } else {
-      await client.request('POST', `${tagPath}/git/refs`, {
-        body: { ref: `refs/tags/${tagName}`, sha: ref.commitSha },
-      })
+      try {
+        await client.request('POST', `${tagPath}/git/refs`, {
+          body: { ref: `refs/tags/${tagName}`, sha: ref.commitSha },
+        })
+      } catch (error) {
+        // GitHub occasionally 500s on ref creation; the release call below still
+        // creates the tag at target_commitish.
+        console.warn(`直接创建标签失败（继续创建 Release）：${error?.message ?? error}`)
+      }
       await client.request('POST', `${tagPath}/releases`, {
-        body: { tag_name: tagName, name: tagName, body: RELEASE_NOTES, draft: false, prerelease: false },
+        body: {
+          tag_name: tagName,
+          target_commitish: ref.commitSha,
+          name: tagName,
+          body: RELEASE_NOTES,
+          draft: false,
+          prerelease: false,
+        },
       })
       console.log(`已创建标签与 Release：${tagName}`)
     }
