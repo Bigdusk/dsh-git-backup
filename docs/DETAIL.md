@@ -40,7 +40,16 @@
 - **回滚**：直接恢复整个 `.dsh`（也会先自动备份当前改动）。
 - 版本区右上角还有 **撤销回滚**：把工作区恢复到上一次回滚之前的状态。
 
-点某行「回滚」＝执行 `/dsh-backup rollback <提交号>`：先把本地 `.dsh` 恢复成那个提交的内容（写入变更文件、删除该版本里没有的本地文件），再推一个新提交，本地与远端保持同步，随后自动刷新列表。
+点某行「回滚」＝执行 `/dsh-backup rollback <提交号>`：先把本地 `.dsh` 恢复成那个提交的内容（写入变更文件、删除该版本里没有的本地文件），再推一个新提交，本地与远端保持同步，随后自动刷新列表。如果工作区原本**没有** `.dsh`（新机器、空目录），这次回滚只写本地、不产生新提交——避免把远端分支顺手回退成旧版本。
+
+### 远端备份卡（换机器 / 新工作区）
+
+仓库里每个工作区都存成 `workspaces/<目录名>/`，所以换机器后目录名一变，按名字推出来的前缀就找不到东西。为此面板加了「远端备份」卡：
+
+- 列出仓库里所有 `workspaces/<名字>`（名字、文件数、最近一次提交），点「拉到当前工作区」执行 `/dsh-backup pull --from <前缀>`；勾选「同时删除本地多余文件」额外加 `--prune`。
+- 头部「拉取」按钮保持原来的按目录名推导，但当推导出的前缀为空、且远端只有一个工作区时会自动用它，并在结果里注明。
+- 一个都没匹配上时，报错会列出远端现有的前缀，而不是只给一句「找不到」。
+- 覆盖写之前仍会先跑 `autosave-before-restore`，不会静默丢本地改动。
 
 ### 自动同步（默认开启，可关闭）+ 手动提交
 
@@ -125,21 +134,23 @@ token 默认从 `%USERPROFILE%\.dsh\.env` 读 `GITHUB_TOKEN`，可用 `--token-e
 |---|---|
 | `dsh_backup_status` | 仓库/分支、token 是否可用、每个工作区是否有待推送改动、最近提交与错误。`checkRemote: true` 会额外读取远端 HEAD。 |
 | `dsh_backup_push` | 立即推送当前工作区的 `.dsh`。`dryRun: true` 只预览变更（不建仓、不上传），`message` 可自定义提交信息。 |
-| `dsh_backup_pull` | 把远端备份拉回当前工作区。`dryRun: true` 只预览；`prune: true` 删除远端已不存在的本地文件。 |
+| `dsh_backup_pull` | 把远端备份拉回当前工作区。`dryRun: true` 只预览；`prune: true` 删除远端已不存在的本地文件；`remoteRoot` 指定远端前缀（换机器时用它挑别的工作区的备份）。 |
+| `dsh_backup_remotes` | 列出仓库里已有的工作区（`workspaces/<名字>`）、文件数与最近提交，供换机器时挑前缀。 |
 | `dsh_backup_set_token` | 校验 token 并写入 `$DSH_HOME/.env`，随后安排一次自动备份。token 不会出现在返回值或日志中。 |
 | `dsh_backup_auto` | 临时开关本进程的自动同步（不持久化）。 |
 | `dsh_backup_history` | 列出某个工作区 `.dsh` 的备份版本：序号、短提交号、时间、说明。`limit` 默认 10；传 `version` 改为列出该版本改动的文件与增删行数。 |
-| `dsh_backup_rollback` | 回滚到某个版本：`version` 接受序号、提交号（可缩写）、分支或标签；`paths` 只恢复指定文件/目录，`undo: true` 撤销上一次回滚，`local: true` 只改本地，`dryRun: true` 只预览。 |
+| `dsh_backup_rollback` | 回滚到某个版本：`version` 接受序号、提交号（可缩写）、分支或标签；`paths` 只恢复指定文件/目录，`remoteRoot` 指定远端前缀，`undo: true` 撤销上一次回滚，`local: true` 只改本地，`dryRun: true` 只预览。工作区没有 `.dsh` 也能恢复（只写本地、不推远端）。 |
 | `dsh_backup_workspaces` | 工作区管理：`action` 为 list / add / remove / enable / disable，`path` 为工作区绝对路径。 |
 | `dsh_backup_health` | 体检备份仓库：大小、远端/本地文件数、逐文件一致性（只读）。 |
 | `dsh_backup_diff` | 查看某版本的内容改动（unified patch），可用 `path` 过滤。 |
 
-斜杠命令：`/dsh-backup status | push | pull | history [n] | detail <ref> | diff <ref> [路径] | preview <ref> | rollback <ref> [--local] [--only <路径>] | undo | workspaces | workspace <add|remove|enable|disable> <路径> | auto [on|off] | token <token|clear> | health | config [set <键> <值>]`，不经模型直接执行，控制条按钮和「快照」页调用的就是它。
+斜杠命令：`/dsh-backup status | push | pull [--from <前缀>] [--prune] [--dry-run] | remote | history [n] | detail <ref> | diff <ref> [路径] | preview <ref> | rollback <ref> [--local] [--only <路径>] [--from <前缀>] | undo | workspaces | workspace <add|remove|enable|disable> <路径> | auto [on|off] | token <token|clear> | health | config [set <键> <值>]`，不经模型直接执行，控制条按钮和「快照」页调用的就是它。
 
 ## 版本回滚
 
 - 版本来源是该工作区远端目录（`workspaces/<工作区名>/`）下的提交历史，所以只有真正改动过这个工作区 `.dsh` 的提交才会出现在列表里。
 - 回滚是「恢复到旧版本 + 推一个新提交」，history 本身不可变：你可以随时再回滚到回滚之前那个版本。
+- 例外：工作区原本没有 `.dsh`（新机器 / 空目录）时，回滚只写本地、不推送——否则会顺手把远端分支回退成旧版本。此时结果里会注明「这次只恢复到本地」。
 - 回滚时按配置的 `exclude` 过滤文件；被排除的本地文件（如 `.credentials*`、`.env`）不会被删除。
 - 只想暂时看一眼旧版本、不想动远端时用 `local: true` / `--local`，此时远端保留较新版本，后续任何改动仍会正常推送。
 

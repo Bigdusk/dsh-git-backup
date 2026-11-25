@@ -138,3 +138,53 @@ test('config set writes through the injected editor', async () => {
   assert.equal(result.kind, 'success')
   assert.deepEqual(configWrites, [['branch', 'dev']])
 })
+
+test('remote lists backed-up workspaces and emits a payload', async () => {
+  const engine = fakeEngine({
+    remoteWorkspaces: async () => ({
+      repo: 'o/r',
+      branch: 'main',
+      headCommit: 'abc1234567',
+      items: [
+        { prefix: 'workspaces/old', name: 'old', files: 2, last: { short: 'aaa1111111', date: '2026-01-01T00:00:00Z', message: 'backup(old)' } },
+      ],
+    }),
+  })
+  const { command } = makeCommand(engine)
+  const result = await command.handler({ rawInput: 'remote' })
+  assert.equal(result.kind, 'success')
+  assert.match(result.text, /workspaces\/old/)
+  const payload = payloadOf(result.text)
+  assert.equal(payload.kind, 'remotes')
+  assert.equal(payload.items[0].files, 2)
+})
+
+test('pull forwards --from and --prune to the engine', async () => {
+  let seen = null
+  const engine = fakeEngine({
+    pull: async (root, options) => {
+      seen = options
+      return {
+        repo: 'o/r',
+        branch: 'main',
+        prefix: 'workspaces/old',
+        folder: `${root}/.dsh`,
+        total: 1,
+        written: ['a.md'],
+        wouldWrite: ['a.md'],
+        same: [],
+        excluded: [],
+        pruned: ['b.md'],
+        failures: [],
+        autoPrefix: true,
+        dryRun: false,
+      }
+    },
+  })
+  const { command } = makeCommand(engine)
+  const result = await command.handler({ rawInput: 'pull --from workspaces/old --prune' })
+  assert.equal(result.kind, 'success')
+  assert.equal(seen.remoteRoot, 'workspaces/old')
+  assert.equal(seen.prune, true)
+  assert.match(result.text, /自动选用/)
+})

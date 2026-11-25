@@ -244,3 +244,27 @@ test('modal waits for the requested version instead of showing stale data', asyn
   assert.ok(ui.text().includes('skills/b-new.md'))
   assert.ok(!ui.text().includes('skills/a-old.md'))
 })
+
+test('remote backups card pulls a chosen workspace into the current one', async () => {
+  const ui = createHarness()
+  ui.render()
+  await settle()
+  ui.render()
+  ui.emit({ kind: 'status', autoSync: true, token: { present: true, daysLeft: 20 }, failingRoots: [], roots: [] })
+  ui.emit({
+    kind: 'remotes',
+    repository: 'o/r',
+    branch: 'main',
+    items: [
+      { prefix: 'workspaces/old-machine', name: 'old-machine', files: 12, last: { short: 'aaa1111111', date: new Date().toISOString(), message: 'backup(old-machine): 12 个文件更新' } },
+      { prefix: 'workspaces/T', name: 'T', files: 220, last: null },
+    ],
+  })
+  assert.ok(ui.text().includes('远端备份'))
+  assert.ok(ui.text().includes('workspaces/old-machine'))
+  assert.equal(ui.buttonsWithText('拉到当前工作区').length, 2)
+
+  ui.buttonsWithText('拉到当前工作区')[0].props.onClick()
+  await settle()
+  assert.ok(ui.calls.includes('/dsh-backup pull --from workspaces/old-machine'))
+})

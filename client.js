@@ -106,6 +106,14 @@ window.__ModuleLoader__.load({
       noDiff: '这个版本没有文本补丁（可能是二进制文件）。',
       healthOk: '本地与远端完全一致。',
       healthSize: (kb) => (kb === null ? '大小未知' : `${kb} KB`),
+      remotes: '远端备份',
+      descRemotes: '仓库里已备份的工作区。换机器或开了新目录时，点「拉到当前工作区」就能恢复。',
+      noRemotes: '远端还没有工作区备份。',
+      pullToHere: '拉到当前工作区',
+      pulledToHere: (prefix) => `已把 ${prefix} 拉到当前工作区`,
+      pruneLabel: '同时删除本地多余文件',
+      remoteHint: '拉取只覆盖远端已有的文件，不会删本地多余文件；勾选「同时删除」才会清理。',
+      remoteAutoNote: '当前工作区名在远端没有对应目录，已自动匹配远端唯一的工作区。',
     }
 
     // Web3-style dark glass dashboard: self-contained palette so the panel keeps
@@ -349,6 +357,7 @@ window.__ModuleLoader__.load({
       const [payloads, setPayloads] = React.useState({
         versions: [],
         workspaces: [],
+        remotes: [],
         status: null,
         detail: null,
         preview: null,
@@ -369,6 +378,8 @@ window.__ModuleLoader__.load({
             setPayloads((current) => ({ ...current, versions: payload.items }))
           } else if (payload.kind === 'workspaces' && Array.isArray(payload.items)) {
             setPayloads((current) => ({ ...current, workspaces: payload.items }))
+          } else if (payload.kind === 'remotes' && Array.isArray(payload.items)) {
+            setPayloads((current) => ({ ...current, remotes: payload.items }))
           } else if (payload.kind === 'status') {
             setPayloads((current) => ({ ...current, status: payload }))
           } else if (payload.kind === 'detail') {
@@ -429,6 +440,7 @@ window.__ModuleLoader__.load({
         const [payloads, resetPayload] = usePluginPayloads(ctx, props?.sessionId)
         const versions = payloads.versions ?? []
         const workspaces = payloads.workspaces ?? []
+        const remotes = payloads.remotes ?? []
         const statusInfo = payloads.status ?? null
         const detail = payloads.detail ?? null
         const preview = payloads.preview ?? null
@@ -438,8 +450,11 @@ window.__ModuleLoader__.load({
 
         const [versionsLoaded, setVersionsLoaded] = React.useState(false)
         const [workspacesLoaded, setWorkspacesLoaded] = React.useState(false)
+        const [remotesLoaded, setRemotesLoaded] = React.useState(false)
         const [versionBusy, setVersionBusy] = React.useState(false)
         const [workspaceBusy, setWorkspaceBusy] = React.useState(false)
+        const [remoteBusy, setRemoteBusy] = React.useState(false)
+        const [remotePrune, setRemotePrune] = React.useState(false)
         const [tokenBusy, setTokenBusy] = React.useState(false)
         const [rollbackRef, setRollbackRef] = React.useState('')
         const [workspacePathDraft, setWorkspacePathDraft] = React.useState('')
@@ -489,6 +504,17 @@ window.__ModuleLoader__.load({
             done: () => {
               setWorkspaceBusy(false)
               setWorkspacesLoaded(true)
+            },
+          })
+        }
+
+        const refreshRemotes = () => {
+          if (!hasSession) return
+          setRemoteBusy(true)
+          run(TEXT.remotes, '/dsh-backup remote', {
+            done: () => {
+              setRemoteBusy(false)
+              setRemotesLoaded(true)
             },
           })
         }
@@ -559,6 +585,21 @@ window.__ModuleLoader__.load({
             okText: `${TEXT.pulled} · ${TEXT.sent}`,
             done: () => {
               refreshVersions()
+              refreshStatus()
+            },
+          })
+        }
+
+        const pullRemote = (prefix) => {
+          if (remoteBusy || !hasSession) return
+          setRemoteBusy(true)
+          const extra = remotePrune ? ' --prune' : ''
+          run(TEXT.pullToHere, `/dsh-backup pull --from ${prefix}${extra}`, {
+            okText: `${TEXT.pulledToHere(prefix)} · ${TEXT.sent}`,
+            done: () => {
+              setRemoteBusy(false)
+              refreshVersions()
+              refreshWorkspaces()
               refreshStatus()
             },
           })
@@ -688,6 +729,7 @@ window.__ModuleLoader__.load({
           if (!props?.sessionId) return
           refreshVersions()
           refreshWorkspaces()
+          refreshRemotes()
           refreshStatus()
           loadConfig()
         }, [props?.sessionId])
@@ -855,6 +897,34 @@ window.__ModuleLoader__.load({
                       variant: entry.disabled ? 'secondary' : 'soft',
                       tiny: true,
                       disabled: workspaceBusy,
+                    }),
+                  ]),
+                ]),
+              )
+
+        const remoteRows = !remotesLoaded && remotes.length === 0
+          ? skeletonRows(2)
+          : remotes.length === 0
+            ? [h('div', { key: 'empty', className: 'dshgb-empty' }, TEXT.noRemotes)]
+            : remotes.map((entry) =>
+                h('div', { key: entry.prefix, className: 'dshgb-wsrow' }, [
+                  h('div', { key: 'main', className: 'dshgb-wsmain' }, [
+                    h('div', { key: 'name', className: 'dshgb-wsname' }, [
+                      entry.name,
+                      entry.last ? h('span', { key: 'when', className: 'dshgb-meta' }, formatWhen(entry.last.date)) : null,
+                      h('span', { key: 'files', className: 'dshgb-meta' }, `${entry.files ?? 0} ${TEXT.files}`),
+                    ]),
+                    h(
+                      'div',
+                      { key: 'path', className: 'dshgb-wspath', title: entry.prefix },
+                      entry.last ? `${entry.prefix} · ${cleanMessage(entry.last.message) || TEXT.noMessage}` : entry.prefix,
+                    ),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
+                    btn('pull', TEXT.pullToHere, () => pullRemote(entry.prefix), {
+                      variant: 'primary',
+                      tiny: true,
+                      disabled: remoteBusy,
                     }),
                   ]),
                 ]),
@@ -1300,6 +1370,35 @@ window.__ModuleLoader__.load({
                 h('div', { key: 'rows', className: 'dshgb-rows' }, versionRows),
                 versionFooter,
                 h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.hintRollback),
+              ]),
+              h('section', { key: 'remotes', className: 'dshgb-card', 'aria-label': TEXT.remotes }, [
+                h('div', { key: 'head', className: 'dshgb-cardhead' }, [
+                  h('div', { key: 'title', className: 'dshgb-cardtitle' }, [
+                    h('span', { key: 'name', className: 'dshgb-cardname' }, [
+                      icon('cloud'),
+                      TEXT.remotes,
+                      h('span', { key: 'count', className: 'dshgb-count' }, `${remotes.length}`),
+                    ]),
+                    h('span', { key: 'desc', className: 'dshgb-carddesc' }, TEXT.descRemotes),
+                  ]),
+                  h('div', { key: 'actions', className: 'dshgb-cardactions' }, [
+                    h('label', { key: 'prune', className: 'dshgb-hint', style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, [
+                      h('input', {
+                        key: 'cb',
+                        type: 'checkbox',
+                        checked: remotePrune,
+                        onChange: (event) => setRemotePrune(event.target.checked),
+                      }),
+                      TEXT.pruneLabel,
+                    ]),
+                    btn('refresh', remoteBusy ? TEXT.loading : TEXT.refresh, refreshRemotes, {
+                      variant: 'secondary',
+                      disabled: remoteBusy,
+                    }),
+                  ]),
+                ]),
+                h('div', { key: 'rows', className: 'dshgb-rows' }, remoteRows),
+                h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.remoteHint),
               ]),
               h('section', { key: 'workspaces', className: 'dshgb-card', 'aria-label': TEXT.workspaces }, [
                 h('div', { key: 'head', className: 'dshgb-cardhead' }, [

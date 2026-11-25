@@ -20,6 +20,7 @@
 | 撤销回滚 | 一键回到上一次回滚之前的状态 |
 | 版本详情 | 每个版本改动了哪些文件、增删多少行 |
 | 工作区管理 | 启用/停用/添加工作区；停用后不参与自动同步但保留历史 |
+| 换机恢复 | 「远端备份」卡列出仓库里的每个 `workspaces/<名字>`，一键拉到当前工作区；当前目录名在远端不存在时自动匹配唯一的工作区 |
 | 冲突保护 | 远端 HEAD 被其他设备改动时自动提交会中止并提示，避免静默覆盖；push/pull/rollback 同一工作区串行 |
 | 内容改动 | 按版本/单文件查看 unified patch（绿加红删），回滚前能看清具体改了什么 |
 | 仓库体检 | 仓库大小、远端/本地文件数、逐文件一致性（不一致 / 未备份 / 远端多出） |
@@ -50,21 +51,31 @@ token 需要 `repo` 权限（classic），或 fine-grained 的 Contents: Read an
 1. 保存 token 后自动开始首次全量备份（仓库默认 `dsh-backup`，私有，自动创建）。
 2. 之后编辑 `.dsh` 下的文件，插件会自动提交。
 3. 需要回退时打开「快照」页 → 选版本 → 预览 → 回滚（或只恢复其中某个文件）。
-4. 换机器：`node recover.mjs --repo <owner>/dsh-backup --target <工作区目录>`。
+4. 换机器 / 新目录：打开「快照」页 →「远端备份」卡 → 选中之前的工作区 →「拉到当前工作区」；也可以 `node recover.mjs --repo <owner>/dsh-backup --target <工作区目录>`。
+
+## 换机器 / 新工作区恢复
+
+新机器上的目录名通常和旧机器不一样，备份里的前缀是 `workspaces/<旧目录名>`，所以按目录名直接拉会找不到。三种方式都可以：
+
+- **界面**：「快照」页 →「远端备份」卡会列出仓库里所有工作区（名字、文件数、最近提交），点「拉到当前工作区」即可；勾选「同时删除本地多余文件」相当于 `--prune`。
+- **自动匹配**：直接点头部「拉取」时，如果当前目录名在远端没有对应前缀、而远端只有一个工作区，会自动用它并在结果里说明。
+- **命令 / 工具**：`/dsh-backup pull --from workspaces/<旧目录名>`，或 `dsh_backup_pull({ remoteRoot: "workspaces/<旧目录名>" })`。
+
+恢复到**空工作区**（还没有 `.dsh`）也可以：恢复会自己创建目录，而且这种情况只写本地、不会把远端分支回退成旧版本。要恢复旧版本本身，用「版本回滚」的预览/回滚（同样支持空目录）。
 
 ## 命令与工具
 
 斜杠命令（不经模型，「快照」视图调用的就是它；日常同步不需要手动执行）：
 
 ```
-/dsh-backup status | push | pull
+/dsh-backup status | push | pull [--from <前缀>] [--prune] [--dry-run] | remote
 /dsh-backup history [n] | detail <ref> | preview <ref>
-/dsh-backup rollback <序号|提交号> [--local] [--only <路径>] | undo
+/dsh-backup rollback <序号|提交号> [--local] [--only <路径>] [--from <前缀>] | undo
 /dsh-backup workspaces | workspace <add|remove|enable|disable> <路径>
 /dsh-backup auto [on|off] | token <token> | config [set <键> <值>]
 ```
 
-模型工具：`dsh_backup_status`、`dsh_backup_push`、`dsh_backup_pull`、`dsh_backup_history`、`dsh_backup_rollback`、`dsh_backup_workspaces`、`dsh_backup_set_token`、`dsh_backup_auto`。
+模型工具：`dsh_backup_status`、`dsh_backup_push`、`dsh_backup_pull`、`dsh_backup_remotes`、`dsh_backup_history`、`dsh_backup_rollback`、`dsh_backup_workspaces`、`dsh_backup_set_token`、`dsh_backup_auto`。
 
 ## 灾难恢复（不依赖 DSH）
 

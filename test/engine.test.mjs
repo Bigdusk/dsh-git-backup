@@ -160,3 +160,97 @@ test('clearToken removes only the token line', () => {
     fs.rmSync(home, { recursive: true, force: true })
   }
 })
+
+test('pull restores into an empty workspace and picks the only remote workspace', async () => {
+  const home = tempHome()
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-test-empty-'))
+  process.env.GITHUB_TOKEN = 'ghp_test_token_for_suite_123456'
+  const tree = new Map([['workspaces/old-machine/a.md', 'blob-a']])
+  try {
+    const engine = new BackupEngine({ config: { repo: 'o/r' }, home })
+    engine.client = () => ({
+      resolveRepository: async () => ({ owner: 'o', name: 'r', fullName: 'o/r' }),
+      getRef: async () => ({ commitSha: 'head0001' }),
+      getCommit: async () => ({ commitSha: 'head0001', treeSha: 'tree1', message: 'x' }),
+      getTree: async () => ({ files: tree, truncated: false }),
+      getBlob: async () => Buffer.from('# restored\n'),
+    })
+    assert.equal(fs.existsSync(path.join(workspace, '.dsh')), false)
+    const result = await engine.pull(workspace, {})
+    assert.equal(result.autoPrefix, true)
+    assert.equal(result.prefix, 'workspaces/old-machine')
+    assert.deepEqual(result.written, ['a.md'])
+    assert.equal(fs.readFileSync(path.join(workspace, '.dsh', 'a.md'), 'utf8'), '# restored\n')
+  } finally {
+    delete process.env.GITHUB_TOKEN
+    fs.rmSync(home, { recursive: true, force: true })
+    fs.rmSync(workspace, { recursive: true, force: true })
+  }
+})
+
+test('rollback restores a past version into an empty workspace without pushing', async () => {
+  const home = tempHome()
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-test-empty-'))
+  process.env.GITHUB_TOKEN = 'ghp_test_token_for_suite_123456'
+  let writes = 0
+  try {
+    const engine = new BackupEngine({ config: { repo: 'o/r' }, home })
+    engine.client = () => ({
+      resolveRepository: async () => ({ owner: 'o', name: 'r', fullName: 'o/r' }),
+      getRef: async () => ({ commitSha: 'head0002' }),
+      getCommitByRef: async () => ({ sha: 'old0001', treeSha: 'tree-old', message: 'old', date: null }),
+      getTree: async () => ({ files: new Map([['workspaces/T/a.md', 'blob-a']]), truncated: false }),
+      getBlob: async () => Buffer.from('# old\n'),
+      updateRef: async () => {
+        writes += 1
+      },
+    })
+    const result = await engine.rollback(workspace, 'old0001', { remoteRoot: 'workspaces/T' })
+    assert.equal(result.restoredFresh, true)
+    assert.equal(result.pushed, null)
+    assert.deepEqual(result.written, ['a.md'])
+    assert.equal(writes, 0)
+    assert.equal(fs.readFileSync(path.join(workspace, '.dsh', 'a.md'), 'utf8'), '# old\n')
+  } finally {
+    delete process.env.GITHUB_TOKEN
+    fs.rmSync(home, { recursive: true, force: true })
+    fs.rmSync(workspace, { recursive: true, force: true })
+  }
+})
+
+test('remoteWorkspaces lists every backed-up workspace with its latest commit', async () => {
+  const home = tempHome()
+  process.env.GITHUB_TOKEN = 'ghp_test_token_for_suite_123456'
+  try {
+    const engine = new BackupEngine({ config: { repo: 'o/r' }, home })
+    engine.client = () => ({
+      resolveRepository: async () => ({ owner: 'o', name: 'r', fullName: 'o/r' }),
+      getRef: async () => ({ commitSha: 'head0003' }),
+      getCommit: async () => ({ commitSha: 'head0003', treeSha: 'tree3', message: 'x' }),
+      getTree: async () => ({
+        files: new Map([
+          ['workspaces/beta/a.md', 'b1'],
+          ['workspaces/alpha/a.md', 'a1'],
+          ['workspaces/alpha/skills/x/SKILL.md', 'a2'],
+          ['README.md', 'r1'],
+        ]),
+        truncated: false,
+      }),
+      listCommits: async (_repository, options) => [
+        { sha: `${options.path}sha`, message: `commit for ${options.path}`, date: '2026-01-02T03:04:05Z' },
+      ],
+    })
+    const remote = await engine.remoteWorkspaces({})
+    assert.deepEqual(
+      remote.items.map((item) => [item.prefix, item.files]),
+      [
+        ['workspaces/alpha', 2],
+        ['workspaces/beta', 1],
+      ],
+    )
+    assert.equal(remote.items[0].last.short, 'workspaces/alpha/sha'.slice(0, 10))
+  } finally {
+    delete process.env.GITHUB_TOKEN
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
