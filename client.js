@@ -107,12 +107,16 @@ window.__ModuleLoader__.load({
       healthOk: '本地与远端完全一致。',
       healthSize: (kb) => (kb === null ? '大小未知' : `${kb} KB`),
       remotes: '远端备份',
-      descRemotes: '仓库里已备份的工作区。换机器或开了新目录时，点「拉到当前工作区」就能恢复。',
+      descRemotes: '仓库里已备份的工作区。点「拉取工作区」会在桌面新建文件夹、注册成 DSH 工作区，再把备份拉进去。',
       noRemotes: '远端还没有工作区备份。',
-      pullToHere: '拉到当前工作区',
-      pulledToHere: (prefix) => `已把 ${prefix} 拉到当前工作区`,
+      pullToNew: '拉取工作区',
+      pulledToNew: (name) => `已把 ${name} 恢复成新工作区`,
+      pulledNote: (path, files, registered) =>
+        registered === false
+          ? `已创建 ${path}（${files} 个文件），但没能注册成工作区，可手动添加。`
+          : `已创建 ${path}（${files} 个文件）并注册为工作区。`,
       pruneLabel: '同时删除本地多余文件',
-      remoteHint: '拉取只覆盖远端已有的文件，不会删本地多余文件；勾选「同时删除」才会清理。',
+      remoteHint: '拉取会新建目录并注册工作区，不会覆盖已有文件夹；重名时自动加 -2 后缀。',
       remoteAutoNote: '当前工作区名在远端没有对应目录，已自动匹配远端唯一的工作区。',
     }
 
@@ -231,6 +235,7 @@ window.__ModuleLoader__.load({
 .dshgb-diffline--hunk { color:var(--dsw-alias-brand-primary); }
 .dshgb-healthrow { display:flex; gap:12px; flex-wrap:wrap; }
 .dshgb-hint { font-size:11px; color:var(--dsw-alias-label-secondary); }
+.dshgb-pulled { padding:9px 11px; border-radius:9px; font-size:12px; color:var(--dsw-alias-state-success-primary); background:var(--dsw-alias-bg-layer-1); border:1px dashed var(--dsw-alias-state-success-primary); word-break:break-all; }
 .dshgb-status { font-size:11.5px; animation:dshgb-rise .2s ease-out both; }
 .dshgb-status--ok { color:var(--dsw-alias-state-success-primary); }
 .dshgb-status--err { color:var(--dsw-alias-state-error-primary); }
@@ -358,6 +363,7 @@ window.__ModuleLoader__.load({
         versions: [],
         workspaces: [],
         remotes: [],
+        pulled: null,
         status: null,
         detail: null,
         preview: null,
@@ -380,6 +386,8 @@ window.__ModuleLoader__.load({
             setPayloads((current) => ({ ...current, workspaces: payload.items }))
           } else if (payload.kind === 'remotes' && Array.isArray(payload.items)) {
             setPayloads((current) => ({ ...current, remotes: payload.items }))
+          } else if (payload.kind === 'pulled') {
+            setPayloads((current) => ({ ...current, pulled: payload }))
           } else if (payload.kind === 'status') {
             setPayloads((current) => ({ ...current, status: payload }))
           } else if (payload.kind === 'detail') {
@@ -441,6 +449,7 @@ window.__ModuleLoader__.load({
         const versions = payloads.versions ?? []
         const workspaces = payloads.workspaces ?? []
         const remotes = payloads.remotes ?? []
+        const pulled = payloads.pulled ?? null
         const statusInfo = payloads.status ?? null
         const detail = payloads.detail ?? null
         const preview = payloads.preview ?? null
@@ -590,14 +599,16 @@ window.__ModuleLoader__.load({
           })
         }
 
-        const pullRemote = (prefix) => {
+        const pullRemote = (entry) => {
           if (remoteBusy || !hasSession) return
           setRemoteBusy(true)
+          resetPayload('pulled')
           const extra = remotePrune ? ' --prune' : ''
-          run(TEXT.pullToHere, `/dsh-backup pull --from ${prefix}${extra}`, {
-            okText: `${TEXT.pulledToHere(prefix)} · ${TEXT.sent}`,
+          run(TEXT.pullToNew, `/dsh-backup pull-workspace ${entry.prefix}${extra}`, {
+            okText: `${TEXT.pulledToNew(entry.name ?? entry.prefix)} · ${TEXT.sent}`,
             done: () => {
               setRemoteBusy(false)
+              refreshRemotes()
               refreshVersions()
               refreshWorkspaces()
               refreshStatus()
@@ -921,7 +932,7 @@ window.__ModuleLoader__.load({
                     ),
                   ]),
                   h('div', { key: 'actions', className: 'dshgb-rowactions' }, [
-                    btn('pull', TEXT.pullToHere, () => pullRemote(entry.prefix), {
+                    btn('pull', TEXT.pullToNew, () => pullRemote(entry), {
                       variant: 'primary',
                       tiny: true,
                       disabled: remoteBusy,
@@ -1398,6 +1409,15 @@ window.__ModuleLoader__.load({
                   ]),
                 ]),
                 h('div', { key: 'rows', className: 'dshgb-rows' }, remoteRows),
+                pulled
+                  ? h(
+                      'div',
+                      { key: 'pulled', className: 'dshgb-pulled' },
+                      pulled.dryRun
+                        ? `${pulled.path}：预览，将写入 ${pulled.wouldWrite ?? 0} 个文件`
+                        : TEXT.pulledNote(pulled.path, pulled.written ?? 0, pulled.registered),
+                    )
+                  : null,
                 h('span', { key: 'hint', className: 'dshgb-hint' }, TEXT.remoteHint),
               ]),
               h('section', { key: 'workspaces', className: 'dshgb-card', 'aria-label': TEXT.workspaces }, [

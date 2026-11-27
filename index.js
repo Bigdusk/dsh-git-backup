@@ -199,6 +199,7 @@ export function apply(ctx, config) {
   const tools = createTools({
     engine,
     ctx,
+    get,
     trackedRoots,
     manageableEntries,
     rootForAgent,

@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-git-backup",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -32,7 +32,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test test/engine.test.mjs test/commands.test.mjs test/client.test.mjs test/util.test.mjs"
+    "test": "node --test test/engine.test.mjs test/commands.test.mjs test/client.test.mjs test/util.test.mjs test/restore.test.mjs"
   },
   "dsh": {
     "bundle": {

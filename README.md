@@ -20,7 +20,7 @@
 | 撤销回滚 | 一键回到上一次回滚之前的状态 |
 | 版本详情 | 每个版本改动了哪些文件、增删多少行 |
 | 工作区管理 | 启用/停用/添加工作区；停用后不参与自动同步但保留历史 |
-| 换机恢复 | 「远端备份」卡列出仓库里的每个 `workspaces/<名字>`，一键拉到当前工作区；当前目录名在远端不存在时自动匹配唯一的工作区 |
+| 换机恢复 | 「远端备份」卡列出仓库里的每个 `workspaces/<名字>`，点「拉取工作区」就在桌面新建同名文件夹、把它注册成 DSH 工作区，再把备份拉进去；重名自动加 `-2` |
 | 冲突保护 | 远端 HEAD 被其他设备改动时自动提交会中止并提示，避免静默覆盖；push/pull/rollback 同一工作区串行 |
 | 内容改动 | 按版本/单文件查看 unified patch（绿加红删），回滚前能看清具体改了什么 |
 | 仓库体检 | 仓库大小、远端/本地文件数、逐文件一致性（不一致 / 未备份 / 远端多出） |
@@ -51,15 +51,16 @@ token 需要 `repo` 权限（classic），或 fine-grained 的 Contents: Read an
 1. 保存 token 后自动开始首次全量备份（仓库默认 `dsh-backup`，私有，自动创建）。
 2. 之后编辑 `.dsh` 下的文件，插件会自动提交。
 3. 需要回退时打开「快照」页 → 选版本 → 预览 → 回滚（或只恢复其中某个文件）。
-4. 换机器 / 新目录：打开「快照」页 →「远端备份」卡 → 选中之前的工作区 →「拉到当前工作区」；也可以 `node recover.mjs --repo <owner>/dsh-backup --target <工作区目录>`。
+4. 换机器 / 新目录：打开「快照」页 →「远端备份」卡 → 选中之前的工作区 →「拉取工作区」（桌面新建文件夹 → 注册为 DSH 工作区 → 拉数据）；也可以 `node recover.mjs --repo <owner>/dsh-backup --target <工作区目录>`。
 
 ## 换机器 / 新工作区恢复
 
-新机器上的目录名通常和旧机器不一样，备份里的前缀是 `workspaces/<旧目录名>`，所以按目录名直接拉会找不到。三种方式都可以：
+新机器上的目录名通常和旧机器不一样，备份里的前缀是 `workspaces/<旧目录名>`，所以按目录名直接拉会找不到。推荐用「拉取工作区」：它不依赖当前打开的是哪个目录。
 
-- **界面**：「快照」页 →「远端备份」卡会列出仓库里所有工作区（名字、文件数、最近提交），点「拉到当前工作区」即可；勾选「同时删除本地多余文件」相当于 `--prune`。
-- **自动匹配**：直接点头部「拉取」时，如果当前目录名在远端没有对应前缀、而远端只有一个工作区，会自动用它并在结果里说明。
-- **命令 / 工具**：`/dsh-backup pull --from workspaces/<旧目录名>`，或 `dsh_backup_pull({ remoteRoot: "workspaces/<旧目录名>" })`。
+- **界面**：「快照」页 →「远端备份」卡会列出仓库里所有工作区（名字、文件数、最近提交），点「拉取工作区」：① 在桌面新建同名文件夹（已存在则加 `-2`、`-3`，绝不复用非空目录）② 把该文件夹注册成 DeepSeek Harness 工作区 ③ 把 `workspaces/<名字>` 的文件拉进它的 `.dsh`。勾选「同时删除本地多余文件」相当于 `--prune`。
+- **命令 / 工具**：`/dsh-backup pull-workspace workspaces/<旧目录名> [--dir <父目录>] [--name <文件夹名>]`，或 `dsh_backup_pull_workspace({ remoteRoot: "workspaces/<旧目录名>" })`；先 `--dry-run` 可以只看会建到哪、写多少文件。
+- **仍想写进当前工作区**：`/dsh-backup pull --from workspaces/<旧目录名>`（或 `dsh_backup_pull`）保持原样；头部「拉取」按钮在当前目录名匹配不上远端前缀时会自动选用远端唯一的工作区。
+- **不想要这个新工作区**：`/dsh-backup workspace forget <路径>`（或 `dsh_backup_workspaces({ action: "forget", path })`）把它从 DSH 工作区列表移除，目录和文件都保留。
 
 恢复到**空工作区**（还没有 `.dsh`）也可以：恢复会自己创建目录，而且这种情况只写本地、不会把远端分支回退成旧版本。要恢复旧版本本身，用「版本回滚」的预览/回滚（同样支持空目录）。
 
@@ -69,13 +70,14 @@ token 需要 `repo` 权限（classic），或 fine-grained 的 Contents: Read an
 
 ```
 /dsh-backup status | push | pull [--from <前缀>] [--prune] [--dry-run] | remote
+/dsh-backup pull-workspace <前缀> [--dir <父目录>] [--name <文件夹名>] [--prune] [--dry-run]
 /dsh-backup history [n] | detail <ref> | preview <ref>
 /dsh-backup rollback <序号|提交号> [--local] [--only <路径>] [--from <前缀>] | undo
-/dsh-backup workspaces | workspace <add|remove|enable|disable> <路径>
+/dsh-backup workspaces | workspace <add|remove|enable|disable|forget> <路径>
 /dsh-backup auto [on|off] | token <token> | config [set <键> <值>]
 ```
 
-模型工具：`dsh_backup_status`、`dsh_backup_push`、`dsh_backup_pull`、`dsh_backup_remotes`、`dsh_backup_history`、`dsh_backup_rollback`、`dsh_backup_workspaces`、`dsh_backup_set_token`、`dsh_backup_auto`。
+模型工具：`dsh_backup_status`、`dsh_backup_push`、`dsh_backup_pull`、`dsh_backup_pull_workspace`、`dsh_backup_remotes`、`dsh_backup_history`、`dsh_backup_rollback`、`dsh_backup_workspaces`、`dsh_backup_set_token`、`dsh_backup_auto`。
 
 ## 灾难恢复（不依赖 DSH）
 
@@ -125,8 +127,9 @@ lib/engine.js      Git Data API 同步、回滚、工作区注册表、哈希缓
 lib/github.js      GitHub REST 客户端（重试、token 过期头）
 lib/commands.js    /dsh-backup 命令
 lib/tools.js       模型工具
+lib/restore.js     拉到新工作区：桌面路径、文件夹去重、建目录 + 注册工作区（及 forget）
 recover.mjs        独立灾难恢复脚本
-test/              node:test 套件（engine / commands / client / util）
+test/              node:test 套件（engine / commands / client / util / restore）
 cordis.patch.yml   bundle patch 与默认配置
 docs/DETAIL.md     完整设计与行为说明
 ```

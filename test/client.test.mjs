@@ -245,7 +245,7 @@ test('modal waits for the requested version instead of showing stale data', asyn
   assert.ok(!ui.text().includes('skills/a-old.md'))
 })
 
-test('remote backups card pulls a chosen workspace into the current one', async () => {
+test('remote backups card restores a chosen workspace into a new local workspace', async () => {
   const ui = createHarness()
   ui.render()
   await settle()
@@ -262,9 +262,13 @@ test('remote backups card pulls a chosen workspace into the current one', async 
   })
   assert.ok(ui.text().includes('远端备份'))
   assert.ok(ui.text().includes('workspaces/old-machine'))
-  assert.equal(ui.buttonsWithText('拉到当前工作区').length, 2)
+  assert.equal(ui.buttonsWithText('拉取工作区').length, 2)
+  assert.equal(ui.buttonsWithText('拉到当前工作区').length, 0, 'the old in-place pull is gone from the remote rows')
 
-  ui.buttonsWithText('拉到当前工作区')[0].props.onClick()
+  ui.buttonsWithText('拉取工作区')[0].props.onClick()
   await settle()
-  assert.ok(ui.calls.includes('/dsh-backup pull --from workspaces/old-machine'))
+  assert.ok(ui.calls.includes('/dsh-backup pull-workspace workspaces/old-machine'))
+
+  ui.emit({ kind: 'pulled', path: 'C:\\Users\\me\\Desktop\\old-machine', name: 'old-machine', prefix: 'workspaces/old-machine', written: 12, registered: true })
+  assert.ok(ui.text().includes('C:\\Users\\me\\Desktop\\old-machine'), 'the created folder is reported in the card')
 })

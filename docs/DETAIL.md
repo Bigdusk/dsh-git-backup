@@ -46,7 +46,9 @@
 
 仓库里每个工作区都存成 `workspaces/<目录名>/`，所以换机器后目录名一变，按名字推出来的前缀就找不到东西。为此面板加了「远端备份」卡：
 
-- 列出仓库里所有 `workspaces/<名字>`（名字、文件数、最近一次提交），点「拉到当前工作区」执行 `/dsh-backup pull --from <前缀>`；勾选「同时删除本地多余文件」额外加 `--prune`。
+- 列出仓库里所有 `workspaces/<名字>`（名字、文件数、最近一次提交），点「拉取工作区」执行 `/dsh-backup pull-workspace <前缀>`：先在桌面新建同名文件夹（已存在则 `-2`、`-3`，非空目录绝不复用），把它注册成 DSH 工作区（`workspaceRegistry.create`），再把备份拉进该目录的 `.dsh`。勾选「同时删除本地多余文件」额外加 `--prune`。
+- 这样就不依赖「当前打开的是哪个目录」——旧行为（`/dsh-backup pull --from <前缀>` 写进当前工作区）仍保留在命令和头部「拉取」按钮上，但不再驱动远端备份按钮。
+- 不想要新工作区时用 `/dsh-backup workspace forget <路径>`：只移除 DSH 工作区登记，目录和文件保留。
 - 头部「拉取」按钮保持原来的按目录名推导，但当推导出的前缀为空、且远端只有一个工作区时会自动用它，并在结果里注明。
 - 一个都没匹配上时，报错会列出远端现有的前缀，而不是只给一句「找不到」。
 - 覆盖写之前仍会先跑 `autosave-before-restore`，不会静默丢本地改动。
@@ -135,12 +137,13 @@ token 默认从 `%USERPROFILE%\.dsh\.env` 读 `GITHUB_TOKEN`，可用 `--token-e
 | `dsh_backup_status` | 仓库/分支、token 是否可用、每个工作区是否有待推送改动、最近提交与错误。`checkRemote: true` 会额外读取远端 HEAD。 |
 | `dsh_backup_push` | 立即推送当前工作区的 `.dsh`。`dryRun: true` 只预览变更（不建仓、不上传），`message` 可自定义提交信息。 |
 | `dsh_backup_pull` | 把远端备份拉回当前工作区。`dryRun: true` 只预览；`prune: true` 删除远端已不存在的本地文件；`remoteRoot` 指定远端前缀（换机器时用它挑别的工作区的备份）。 |
+| `dsh_backup_pull_workspace` | 在本地新建目录并注册成 DSH 工作区，再把远端工作区备份拉进去：`parentDir` 默认桌面，`name` 默认取前缀最后一段，重名自动 `-2`；`dryRun: true` 只报告目标路径与文件数。 |
 | `dsh_backup_remotes` | 列出仓库里已有的工作区（`workspaces/<名字>`）、文件数与最近提交，供换机器时挑前缀。 |
 | `dsh_backup_set_token` | 校验 token 并写入 `$DSH_HOME/.env`，随后安排一次自动备份。token 不会出现在返回值或日志中。 |
 | `dsh_backup_auto` | 临时开关本进程的自动同步（不持久化）。 |
 | `dsh_backup_history` | 列出某个工作区 `.dsh` 的备份版本：序号、短提交号、时间、说明。`limit` 默认 10；传 `version` 改为列出该版本改动的文件与增删行数。 |
 | `dsh_backup_rollback` | 回滚到某个版本：`version` 接受序号、提交号（可缩写）、分支或标签；`paths` 只恢复指定文件/目录，`remoteRoot` 指定远端前缀，`undo: true` 撤销上一次回滚，`local: true` 只改本地，`dryRun: true` 只预览。工作区没有 `.dsh` 也能恢复（只写本地、不推远端）。 |
-| `dsh_backup_workspaces` | 工作区管理：`action` 为 list / add / remove / enable / disable，`path` 为工作区绝对路径。 |
+| `dsh_backup_workspaces` | 工作区管理：`action` 为 list / add / remove / enable / disable / forget，`path` 为工作区绝对路径。`forget` 只移除 DSH 工作区登记，文件保留。 |
 | `dsh_backup_health` | 体检备份仓库：大小、远端/本地文件数、逐文件一致性（只读）。 |
 | `dsh_backup_diff` | 查看某版本的内容改动（unified patch），可用 `path` 过滤。 |
 

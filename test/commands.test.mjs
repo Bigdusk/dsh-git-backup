@@ -1,5 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { createCommand } from '../lib/commands.js'
 
 const payloadOf = (text) => {
@@ -187,4 +190,59 @@ test('pull forwards --from and --prune to the engine', async () => {
   assert.equal(seen.remoteRoot, 'workspaces/old')
   assert.equal(seen.prune, true)
   assert.match(result.text, /自动选用/)
+})
+
+test('pull-workspace creates a folder, registers it, then pulls', async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'dshgb-cmd-'))
+  const pulls = []
+  const registered = []
+  const engine = fakeEngine({
+    pull: async (root, options) => {
+      pulls.push({ root, options })
+      return {
+        repo: 'o/r',
+        branch: 'main',
+        prefix: options.remoteRoot,
+        headCommit: 'abc1234567',
+        total: 2,
+        written: ['SKILL.md', 'sub/a.md'],
+        wouldWrite: [],
+        same: [],
+        excluded: [],
+        pruned: [],
+        failures: [],
+        dryRun: false,
+        folder: path.join(root, '.dsh'),
+      }
+    },
+  })
+  const command = createCommand({
+    engine,
+    get: (name) =>
+      name === 'workspaceRegistry'
+        ? {
+            create: async (dir, title) => {
+              registered.push([dir, title])
+              return { id: 'ws_1' }
+            },
+          }
+        : null,
+    trackedRoots: () => [],
+    manageableEntries: () => [],
+    describeWorkspaces: () => '',
+    pollOnce: () => {},
+    readConfig: () => engine.cfg,
+    setConfig: async () => {},
+  })
+  const result = await command.handler({ rawInput: `pull-workspace workspaces/old-machine --dir ${parent}` })
+  assert.equal(result.kind, 'success')
+  assert.match(result.text, /并注册为 DeepSeek Harness 工作区/)
+  assert.deepEqual(registered, [[path.join(parent, 'old-machine'), 'old-machine']])
+  assert.equal(pulls[0].options.remoteRoot, 'workspaces/old-machine')
+  const payload = payloadOf(result.text)
+  assert.equal(payload.kind, 'pulled')
+  assert.equal(payload.registered, true)
+  assert.equal(payload.written, 2)
+  assert.equal(fs.existsSync(path.join(parent, 'old-machine')), true)
+  fs.rmSync(parent, { recursive: true, force: true })
 })
